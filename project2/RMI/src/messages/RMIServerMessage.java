@@ -3,6 +3,8 @@ package messages;
 import java.io.Serializable;
 
 public class RMIServerMessage implements Serializable{
+	private static final long serialVersionUID = -8270255187769367740L;
+	
 	private Object returnValue;
 	private Exception exception;
 	
