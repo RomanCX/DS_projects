@@ -8,7 +8,7 @@ import java.net.Socket;
 import messages.*;
 
 /* All stubs should extend this class */
-public class RemoteReference implements Serializable {
+public class RemoteReference implements Serializable, Remote {
 	private static final long serialVersionUID = -1227441569718798946L;
 	
 	protected String interfaceName;
@@ -32,15 +32,13 @@ public class RemoteReference implements Serializable {
 	 */
 	protected RMIServerMessage invokeRemoteMethod(RMIClientMessage msg) {
 		RMIServerMessage ret = null;
-		
 		try (Socket socket = new Socket(host, port);
 			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream())) {
 			oos.writeObject(msg);
 			ret = (RMIServerMessage)ois.readObject();
 		} catch (Exception e) {
-			ret = new RMIServerMessage();
-			ret.setException(e);
+			ret = new RMIServerMessage(e);
 		}
 		return ret;
 	}

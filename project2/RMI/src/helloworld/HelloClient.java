@@ -1,6 +1,10 @@
 package helloworld;
 
-import registry.*;
+
+import registry.LocateRegistry;
+import registry.Registry;
+
+
 
 public class HelloClient {
 	private static String server = "localhost";
