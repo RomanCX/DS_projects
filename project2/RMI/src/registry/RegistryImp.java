@@ -51,6 +51,7 @@ public class RegistryImp implements Registry {
 					" already exist");
 		}
 		this.rebind(name, obj);
+		System.out.println("Binding object " + obj.toString() + " with name " + name);
 	}
 
 	@Override

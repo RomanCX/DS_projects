@@ -62,12 +62,23 @@ public class RMIRegistry {
 				+ inMessage.getObjectName() + " not found.");
 		}
 		Object[] parameters = inMessage.getParameters();
+		/*
 		Class<?>[] parameterTypes = new Class<?>[parameters.length];
 		for (int i = 0; i < parameters.length; i++) {
 			parameterTypes[i] = parameters[i].getClass();
  		}
+ 		*/
 		try {
-			Method method = object.getClass().getMethod(inMessage.getMethodName(), parameterTypes);
+			Method method = getMethodByName(object, inMessage.getMethodName());
+			if (method == null) {
+				throw new NoSuchMethodException();
+			}
+ 			//Method method = object.getClass().getMethod(inMessage.getMethodName(), parameterTypes);
+			System.out.println("Invoking " + object.getClass().getName() 
+					+ "." + method.getName() + " with parameters:");
+			for (Object parameter : parameters) {
+				System.out.println("\t" + parameter.toString());
+			}
 			Object returnObject = method.invoke(object, parameters);
 			return new RMIServerMessage(returnObject);
 		} catch (NoSuchMethodException e) {
@@ -77,6 +88,7 @@ public class RMIRegistry {
 			return new RMIServerMessage("Access to method " 
 					+ inMessage.getMethodName() + " denied");
 		} catch (IllegalAccessException e) {
+			e.printStackTrace();
 			return new RMIServerMessage("Trying to access unaccessible class");
 		} catch (IllegalArgumentException e) {
 			return new RMIServerMessage("Illegal arguments");
@@ -84,6 +96,19 @@ public class RMIRegistry {
 			return new RMIServerMessage("The target method throws an exception: \n"
 					+ e.getMessage());
 		}
+	}
+	
+	/*
+	 * This function searches for the methodName. If match, returns the method
+	 * Only works if there's exactly one such method.
+	 */
+	private Method getMethodByName(Object object, String methodName) {
+		Method[] ms = object.getClass().getMethods();
+		for (int i = 0; i < ms.length; i++) {
+			if (ms[i].getName().equals(methodName))
+				return ms[i];
+		}
+		return null;
 	}
 
 	

@@ -13,9 +13,13 @@ public class HelloClient {
 	public static void main(String[] args) {
 		try {
 			Registry reg = LocateRegistry.getRegistry(server);
+			String[] remoteObjectList = reg.list();
+			for (String remoteObjectName : remoteObjectList) {
+				System.out.println(remoteObjectName);
+			}
 			HelloInterface hello = (HelloInterface)reg.lookup(helloServerName);
 			
-			String theGreeting = hello.sayHello(args[0]);
+			String theGreeting = hello.sayHello("hahahaha");
 			System.out.println(theGreeting);
 		} catch (Exception e) {
 			e.printStackTrace();

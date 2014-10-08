@@ -1,8 +1,10 @@
 package helloworld;
 
+import registry.LocateRegistry;
+import registry.Registry;
 import remote.RemoteException;
 
-class Hello implements HelloInterface
+public class Hello implements HelloInterface
 {
   private static final String serverName = "hello";
 
