@@ -1,3 +1,11 @@
+/*
+ * Author: Siyuan Zhou, Zichang Feng
+ * The RMIRegistry is the registry running on the server side.
+ * It keeps a copy of Registry and thus maintains a object table.
+ * It is responsible for listens to remote method invocation requests,
+ * invoke methods and sending responding messages.
+ */
+
 package registry;
 
 import java.io.IOException;
@@ -14,7 +22,7 @@ import remote.Remote;
 import remote.RemoteException;
 
 public class RMIRegistry {
-
+	//The registry keeps the object table.
 	private RegistryImp registry;
 	private ServerSocket listenerSocket;
 	public static void main(String[] args) {
@@ -23,6 +31,7 @@ public class RMIRegistry {
 		
 	}
 	
+	//The constructor initialize class fields
 	public RMIRegistry() {
 		registry = (RegistryImp) LocateRegistry.createRegistry();
 		try {
@@ -34,16 +43,20 @@ public class RMIRegistry {
 		}
 	}
 	
+	//After binding the registry itself, keeps waiting for requests
+	//and responding to them
 	public void run() {
 		registry.bindSelf();
 		while(true) {
 			Socket newSocket = null;
 			try {
 				newSocket = listenerSocket.accept();
+				//The object streams are to receive and send messages
 				ObjectOutputStream objectOutputStream = 
 						new ObjectOutputStream(newSocket.getOutputStream());
 				ObjectInputStream objectInStream = new ObjectInputStream(newSocket.getInputStream());
 				RMIClientMessage inMessage = (RMIClientMessage) objectInStream.readObject();
+				//Do the real invocation
 				RMIServerMessage outMessage = invokeMethod(inMessage);
 				objectOutputStream.writeObject(outMessage);
 				objectOutputStream.flush();
@@ -55,6 +68,12 @@ public class RMIRegistry {
 		
 	}
 	
+	/*
+	 * Do the real invocation. It looks for the object, the method
+	 * and invoke the method with parameters.
+	 * In the end, this function assemble a RMIServerMessage as response
+	 * with return value or the exception occurred.
+	 */
 	private RMIServerMessage invokeMethod(RMIClientMessage inMessage) {
 		Remote object = registry.getObject(inMessage.getObjectName());
 		if (object == null) {
@@ -62,18 +81,17 @@ public class RMIRegistry {
 				+ inMessage.getObjectName() + " not found.");
 		}
 		Object[] parameters = inMessage.getParameters();
-		/*
-		Class<?>[] parameterTypes = new Class<?>[parameters.length];
-		for (int i = 0; i < parameters.length; i++) {
-			parameterTypes[i] = parameters[i].getClass();
- 		}
- 		*/
+
 		try {
+			/*
+			 * We didn't use the getMethod from java because the java getMethod
+			 * requires exact match for parameter types. However, the parameters 
+			 * we get might be extended classes from what's declared in method.
+			 */
 			Method method = getMethodByName(object, inMessage.getMethodName());
 			if (method == null) {
 				throw new NoSuchMethodException();
 			}
- 			//Method method = object.getClass().getMethod(inMessage.getMethodName(), parameterTypes);
 			System.out.println("Invoking " + object.getClass().getName() 
 					+ "." + method.getName() + " with parameters:");
 			for (Object parameter : parameters) {

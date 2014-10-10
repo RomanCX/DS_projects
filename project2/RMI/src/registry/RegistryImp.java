@@ -1,3 +1,16 @@
+/*
+ * Author: Siyuan Zhou, Zichang Feng
+ * 
+ * The RegistryImp class is the real impelmentation of Registry interface 
+ * and do all the job as RMIRegistry side. The client and server registry
+ * stubs are remotely invoking methods in this class. 
+ * 
+ * The functionalities are: for client, lookup a remote object reference
+ * and get a list of remote objects; for server, bind, rebind and unbind
+ * an object with name.
+.
+ */
+
 package registry;
 
 import java.net.InetAddress;
@@ -12,9 +25,12 @@ import remote.RemoteReference;
 
 public class RegistryImp implements Registry {
 
+	//Table to store mapping between names and objects
 	private HashMap<String, ObjectStubPair> objectTable;
+	//Host name of RMIRegistry(typically localhost)
+	//Useful when creating stub instance from object instance
 	private String hostname;
-	
+	//Constructor initialize class fields
 	public RegistryImp() {
 		objectTable = new HashMap<String, ObjectStubPair>();
 		try {
@@ -24,6 +40,8 @@ public class RegistryImp implements Registry {
 		}
 		
 	}
+	
+	//A object-stub pair structure. Used as the value in the table.
 	private class ObjectStubPair {
 		public Remote object;
 		public RemoteReference stub;
@@ -33,9 +51,14 @@ public class RegistryImp implements Registry {
 			this.stub = stub;
 		}
 	}
-	
+	/*
+	 * Lookup a remote object with a name. If found, return 
+	 * the RemoteReference(the stub)
+	 * Throw RemoteException if name not found
+	 */
 	@Override
 	public Remote lookup(String name) throws RemoteException {
+		checkName(name);
 		RemoteReference stub = objectTable.get(name).stub;
 		if (stub == null) {
 			throw new RemoteException("Object with name " + name 
@@ -44,6 +67,11 @@ public class RegistryImp implements Registry {
 		return stub;
 	}
 
+    /*
+     * Bind the object with a name.
+     * Throw RemoteException if name already exists
+     * or if the function is called by a client.
+     */
 	@Override
 	public void bind(String name, Remote obj) throws RemoteException {
 		if (objectTable.get(name) != null) {
@@ -54,8 +82,14 @@ public class RegistryImp implements Registry {
 		System.out.println("Binding object " + obj.toString() + " with name " + name);
 	}
 
+    /*
+     * Lookup the object with name and delete it.
+     * Throw RemoeteException if the name doesn't exist
+     * or if the function is called by a client
+     */
 	@Override
 	public void unbind(String name) throws RemoteException {
+		checkName(name);
 		if (objectTable.get(name) == null) {
 			throw new RemoteException("Object with name " + name 
 					+ " not found");
@@ -64,6 +98,9 @@ public class RegistryImp implements Registry {
 
 	}
 
+	/*
+	 * Returns a list of names already binded.
+	 */
 	@Override
 	public String[] list() throws RemoteException {
 		String[] result = new String[objectTable.size()];
@@ -75,19 +112,33 @@ public class RegistryImp implements Registry {
 		return result;
 	}
 
+    /*
+     * Update the table and replace the entry with name and obj.
+     * Throw RemoteException if the function is called by a client.
+     */
 	@Override
 	public void rebind(String name, Remote obj) throws RemoteException {
+		checkName(name);
 		RemoteReference stub = StubFactory.createStub(obj.getClass().getName(), 
 				name, this.hostname, this.REGISTRY_PORT);
 		objectTable.put(name, new ObjectStubPair(obj, stub));
 	}
 	
+	/*
+	 * Check if the object name is the same as registry itself.
+	 * If so, throw RemoteException
+	 */
 	private void checkName(String name) throws RemoteException {
 		if (name.equals(REGISTRY_OBJECT_NAME)) {
 			throw new RemoteException("Cannot operate on registry name");
 		}
 	}
 	
+	/*
+	 * Bind registry itself to the table. The registry entry
+	 * in the table is used for the convenience fore remote calls
+	 * to registry. The entry should not be lookup, bind, rebind or unbind.
+	 */
 	public void bindSelf() {
 		/*
 		 * Registry itself doesn't need a stub stored in the table
@@ -96,6 +147,10 @@ public class RegistryImp implements Registry {
 		objectTable.put(REGISTRY_OBJECT_NAME, new ObjectStubPair(this, null));
 	}
 	
+	/*
+	 * Get the object(rather than the RemoteReference as lookup).
+	 * Called by RMIRegistry to perform method invocation.
+	 */
 	public Remote getObject(String name) {
 		ObjectStubPair pair = objectTable.get(name);
 		if (pair == null) {

@@ -1,3 +1,14 @@
+/*
+ * Author: Siyuan Zhou, Zichang Feng
+ * 
+ * The RegistryServer_stub implements the server side functionalities
+ * of Registry interface. It provides functionality of binding, rebinding
+ * and unbinding an object.
+ * 
+ * The RegistryServer_Stub is actually a RemoteReference to remote object.
+ * All the functions calls are remote method invocations.
+ */
+
 package registry;
 
 import messages.RMIClientMessage;
@@ -8,10 +19,16 @@ import remote.RemoteReference;
 
 public class RegistryServer_Stub extends RemoteReference implements Registry {
 
-	
+	//Constructor simply calls RemoteReference constructor to provide
+	//remote host information and its remote object name.
 	public RegistryServer_Stub(String interfaceName, String host, int port) {
 		super(interfaceName, host, port);
 	}
+	
+	/*
+	 * All methods are simply remote method invocations.
+	 * For interface, please refer to Registry interface.
+	 */
 	@Override
 	public Remote lookup(String name) throws RemoteException {
 		RMIClientMessage msg = 

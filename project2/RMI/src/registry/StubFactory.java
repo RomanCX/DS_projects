@@ -1,3 +1,9 @@
+/*
+ * Author: Siyuan Zhou, Zichang Feng
+ * 
+ * This class serves as a factory for creating stubs from objects.
+ */
+
 package registry;
 
 import java.lang.reflect.Constructor;
