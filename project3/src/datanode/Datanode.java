@@ -23,7 +23,7 @@ import protocals.DatanodeProtocal;
 import protocals.Host;
 import protocals.Operation;
 
-public class DataNode implements Runnable {
+public class Datanode implements Runnable {
 	
 	// configuration file for datanode
 	private static final String cnfFile = "datanode.cnf";
@@ -44,11 +44,11 @@ public class DataNode implements Runnable {
 	// a remote object contains methods used to communicate with namenode
 	private DatanodeProtocal namenode; 
 	
-	public DataNode() {
+	public Datanode() {
 		
 	}
 	
-	/* Load configuration for datanode from file */
+	/* Load configuration of datanode from file */
 	private void loadConfiguration() {
 		Properties pro = new Properties();
 		try {
@@ -286,7 +286,7 @@ public class DataNode implements Runnable {
 	}
 	
 	public static void main(String[] args) {
-		DataNode datanode = new DataNode();
+		Datanode datanode = new Datanode();
 		datanode.start();
 		datanode.offerService();
 	}
