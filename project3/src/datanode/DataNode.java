@@ -21,22 +21,26 @@ import java.util.Properties;
 import protocals.Command;
 import protocals.DatanodeProtocal;
 import protocals.Host;
+import protocals.Operation;
 
 public class DataNode implements Runnable {
 	
+	// configuration file for datanode
 	private static final String cnfFile = "datanode.cnf";
-	
-	private String namenodeAddr; //host name of namenode
-	
-	private String myAddr; //host name of datanode
-	private int myPort; //port number of datanode
-	
-	private String dataDir; //Directory to store data files
-	private int nodeId; // id of this node
-	private Map<Integer, String> blockMap; // block list
-	
-	private long heartBeatInterval; // Interval of hearbeat;
-	
+	//host name of namenode
+	private String namenodeAddr; 
+	//host name of datanode
+	private String myAddr; 
+	//port number of datanode
+	private int myPort; 
+	//directory to store data files
+	private String dataDir; 
+	// id of this node
+	private int nodeId;
+	// block list
+	private Map<Integer, String> blockMap; 
+	// interval of hearbeat;
+	private long heartBeatInterval; 
 	// a remote object contains methods used to communicate with namenode
 	private DatanodeProtocal namenode; 
 	
@@ -44,15 +48,28 @@ public class DataNode implements Runnable {
 		
 	}
 	
+	/* Load configuration for datanode from file */
 	private void loadConfiguration() {
 		Properties pro = new Properties();
-		pro.loadFromXML(new FileInputStream(cnfFile));
+		try {
+			pro.loadFromXML(new FileInputStream(cnfFile));
+			namenodeAddr = pro.getProperty("dfs.namenode");
+			dataDir = pro.getProperty("dfs.data.dir");
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
+	/* Start datanode */
 	private void start() {
 		loadConfiguration();
 		
 		try {
+			// pick a free port
+			ServerSocket tmp = new ServerSocket(0);
+			myPort = tmp.getLocalPort();
+			
+			// register datanode on namenode 
 			Registry registry = LocateRegistry.getRegistry(namenodeAddr);
 			namenode = (DatanodeProtocal)registry.lookup("namenode");
 			myAddr = InetAddress.getLocalHost().getHostName();
@@ -60,6 +77,7 @@ public class DataNode implements Runnable {
 			nodeId = dr.getNodeId();
 			heartBeatInterval = dr.getInterval();
 			
+			// load image of datanode from file if it exists
 			File f = new File(dataDir + "/datanode-image");
 			if (f.exists()) {
 				ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
@@ -69,10 +87,15 @@ public class DataNode implements Runnable {
 			else {
 				blockMap = new HashMap<Integer, String>();
 			}
+			
+			// start listening
+			new Thread(this).start();
 		} catch (Exception e) {
 			System.out.println("datanode fails to start");
 			System.exit(1);
 		}
+		
+		
 	}
 	
 	private void offerService() {
@@ -126,12 +149,13 @@ public class DataNode implements Runnable {
 		ArrayList<Host> targets = command.getTargets();
 		ArrayList<Integer> blockIds = command.getBlockIds();
 		
-		Map<Host, ArrayList<Integer>> m;
+		Map<Host, ArrayList<Integer>> m = 
+				new HashMap<Host, ArrayList<Integer>>();
 		
 		// aggregate blockIds by datanode
 		for (int i = 0; i < targets.size(); ++i) {
 			if (!m.containsKey(targets.get(i))) {
-				ArrayList<Integer> tmp;
+				ArrayList<Integer> tmp = new ArrayList<Integer>();
 				tmp.add(blockIds.get(i));
 				m.put(targets.get(i), tmp);
 			}
@@ -151,7 +175,7 @@ public class DataNode implements Runnable {
 				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
 				
-				oos.writeObject(new Command(READ_DATA, blockIds));
+				oos.writeObject(new Command(Operation.READ_DATA, blockIds));
 				ArrayList<Block> blocks = (ArrayList<Block>)ois.readObject();
 				
 				// write the blocks got from other datanode to local disk
@@ -161,6 +185,8 @@ public class DataNode implements Runnable {
 					writeBlock(fileName, blocks.get(i).getData());
 					blockMap.put(blocks.get(i).getId(), fileName);
 				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 	}
