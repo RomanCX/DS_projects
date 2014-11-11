@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 
+import namenode.DatanodeInfo;
 import datanode.Block;
 import protocals.ClientProtocal;
 import protocals.Command;
@@ -19,6 +20,7 @@ public class Client {
 	private static final String prompt = ">>";
 	private static String address;
 	private static ClientProtocal namenode;
+	
 	
 	/*
 	 *  possible commands:
@@ -81,15 +83,14 @@ public class Client {
 	private static void executeGet(String dfsPath, String localPath) {
 		int pos = dfsPath.indexOf("//");
 		dfsPath = "/" + dfsPath.substring(pos + 1);
-		Map<Integer, List<Integer>> blockInfo = namenode.read(dfsPath, address);
+		Map<DatanodeInfo, List<Integer>> blockInfo = namenode.read(dfsPath, address);
 		
-		ArrayList<Block> blocks = new ArrayList<Block>();
+		List<Block> blocks = new ArrayList<Block>();
 		Iterator iter = blockInfo.entrySet().iterator();
 		while (iter.hasNext()) {
 			Map.Entry entry = (Map.Entry)(iter.next());
 			int datanodeId = (int)entry.getKey();
 			List<Integer> blockIds = (List<Integer>)entry.getValue();
-			Command command = new Command(Operation.READ_DATA, blockIds);
 			
 		}
 	}
