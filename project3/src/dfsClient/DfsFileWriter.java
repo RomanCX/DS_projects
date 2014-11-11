@@ -43,35 +43,39 @@ public class DfsFileWriter {
 		int pos = dfsPath.indexOf("//");
 		dfsPath = "/" + dfsPath.substring(pos + 1);
 		// blockId : list of datanode to be written
-		// tree map?
 		TreeMap<Integer, List<DatanodeInfo>> blockToDn = namenode.write(dfsPath, splitNum);
 		
-		BufferedReader br = new BufferedReader(new FileReader(fileName));
-		String line = null;
-		String prevLine = null;
-		Block block = null;
-		for (int blockId : blockToDn.keySet()) {
-			StringBuilder sb = new StringBuilder();
-			if (prevLine != null) {
-				sb.append(prevLine);
-				sb.append("\n");
-			}
-			while ((line = br.readLine()) != null) {
-				if (sb.length() + line.length() > blockSize) {
-					prevLine = line;
-					break;
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(fileName));
+			String line = null;
+			String prevLine = null;
+			Block block = null;
+			for (int blockId : blockToDn.keySet()) {
+				StringBuilder sb = new StringBuilder();
+				if (prevLine != null) {
+					sb.append(prevLine);
+					sb.append("\n");
 				}
-				sb.append(line);
-				sb.append("\n");
-			}
-			block = new Block(blockId, sb.toString());
-			for (DatanodeInfo datanode : blockToDn.get(blockId)) {
-				if (!sendBlock(block, datanode)) {
-					System.out.println("fail to write block " + blockId
-							+ "to datanode" + datanode.getAddress());
-					return false;
+				while ((line = br.readLine()) != null) {
+					if (sb.length() + line.length() > blockSize) {
+						prevLine = line;
+						break;
+					}
+					sb.append(line);
+					sb.append("\n");
+				}
+				block = new Block(blockId, sb.toString());
+				for (DatanodeInfo datanode : blockToDn.get(blockId)) {
+					if (!sendBlock(block, datanode)) {
+						System.out.println("fail to write block " + blockId
+								+ "to datanode" + datanode.getAddress());
+						return false;
+					}
 				}
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
 		}
 		return true;
 	}
