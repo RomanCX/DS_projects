@@ -23,7 +23,6 @@ import namenode.DatanodeInfo;
 import protocals.Command;
 import protocals.DatanodeProtocal;
 import protocals.DnRegistration;
-import protocals.Host;
 import protocals.Operation;
 
 public class Datanode implements Runnable {
@@ -171,7 +170,7 @@ public class Datanode implements Runnable {
 		Iterator iter = m.entrySet().iterator();
 		while (iter.hasNext()) {
 			Map.Entry entry = (Map.Entry)iter.next();
-			Host target = (Host)entry.getKey();
+			DatanodeInfo target = (DatanodeInfo)entry.getKey();
 			blockIds = (ArrayList<Integer>)entry.getValue();
 			
 			try (Socket socket = new Socket(target.getAddress(), target.getPort());
