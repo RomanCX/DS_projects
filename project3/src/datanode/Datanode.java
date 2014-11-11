@@ -15,9 +15,11 @@ import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import namenode.DatanodeInfo;
 import protocals.Command;
 import protocals.DatanodeProtocal;
 import protocals.DnRegistration;
@@ -147,11 +149,11 @@ public class Datanode implements Runnable {
 	
 	/* Fetch blocks from other datanodes */
 	private void fetch_data(Command command) {
-		ArrayList<Host> targets = command.getTargets();
-		ArrayList<Integer> blockIds = command.getBlockIds();
+		List<DatanodeInfo> targets = command.getTargets();
+		List<Integer> blockIds = command.getBlockIds();
 		
-		Map<Host, ArrayList<Integer>> m = 
-				new HashMap<Host, ArrayList<Integer>>();
+		Map<DatanodeInfo, ArrayList<Integer>> m = 
+				new HashMap<DatanodeInfo, ArrayList<Integer>>();
 		
 		// aggregate blockIds by datanode
 		for (int i = 0; i < targets.size(); ++i) {
@@ -194,7 +196,7 @@ public class Datanode implements Runnable {
 	
 	/* Delete blocks in this datanode */
 	private void delete_data(Command command) {
-		ArrayList<Integer> blockIds = command.getBlockIds();
+		List<Integer> blockIds = command.getBlockIds();
 		
 		for (int i = 0; i < blockIds.size(); ++i) {
 			File f = new File(blockMap.get(blockIds.get(i)));
@@ -206,7 +208,7 @@ public class Datanode implements Runnable {
 	
 	/* Send blocks to client or other datanodes */
 	private void transfer_data(ObjectOutputStream oos, Command command) {
-		ArrayList<Integer> blockIds = command.getBlockIds();
+		List<Integer> blockIds = command.getBlockIds();
 		ArrayList<Block> blocks = new ArrayList<Block>();
 		
 		// read every blocks from local disk

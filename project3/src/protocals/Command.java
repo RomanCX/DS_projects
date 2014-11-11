@@ -1,23 +1,26 @@
 package protocals;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import namenode.DatanodeInfo;
 
 public class Command {
 	
 	public Operation operation;
-	private ArrayList<Host> targets;
-	private ArrayList<Integer> blockIds;
+	private List<DatanodeInfo> targets;
+	private List<Integer> blockIds;
 	
-	public Command(Operation operation, ArrayList<Integer> blockIds) {
+	public Command(Operation operation, List<Integer> blockIds) {
 		this.operation = operation;
 		this.blockIds = blockIds;
 	}
 	
-	public ArrayList<Host> getTargets() {
+	public List<DatanodeInfo> getTargets() {
 		return targets;
 	}
 	
-	public ArrayList<Integer> getBlockIds() {
+	public List<Integer> getBlockIds() {
 		return blockIds;
 	}
 }
