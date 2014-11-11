@@ -236,19 +236,19 @@ public class Datanode implements Runnable {
 		}
 	}
 	
-	/* Receive blocks from client or other datanodes */
-	private void receive_data(ObjectInputStream ois) {
+	/* Receive block from client or other datanodes */
+	private boolean receive_data(ObjectInputStream ois) {
 		try {
-			ArrayList<Block> blocks = (ArrayList<Block>)ois.readObject();
-			for (int i = 0; i < blocks.size(); ++i) {
-				String fileName = "block" + blocks.get(i).getId();
-				writeBlock(fileName, blocks.get(i).getData());
-				// To do, may need lock
-				blockMap.put(blocks.get(i).getId(), blocks.get(i).getData());
-			}
+			Block block = (Block)ois.readObject();
+			String fileName = "block" + block.getId();
+			writeBlock(fileName, block.getData());
+			// To do, may need lock
+			blockMap.put(block.getId(), block.getData());
 		} catch (Exception e) {
 			e.printStackTrace();
+			return false;
 		}
+		return true;
 	}
 	
 	public void run() {
@@ -273,8 +273,10 @@ public class Datanode implements Runnable {
 					transfer_data(oos, command);
 					break;
 				case WRITE_DATA:
-					receive_data(ois);
-					oos.writeObject("done");
+					if (receive_data(ois) == true)
+						oos.writeObject("succeed");
+					else 
+						oos.writeObject("fail");
 					oos.flush();
 					break;
 				default:
