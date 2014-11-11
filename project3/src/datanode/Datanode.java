@@ -20,6 +20,7 @@ import java.util.Properties;
 
 import protocals.Command;
 import protocals.DatanodeProtocal;
+import protocals.DnRegistration;
 import protocals.Host;
 import protocals.Operation;
 
