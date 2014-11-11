@@ -11,7 +11,7 @@ public interface ClientProtocal extends Remote{
 	/*
 	 * Returns hashmap<datanodeId, list of Block Ids>
 	 */
-	public HashMap<DatanodeInfo, List<Integer> > read(String fileName, String address);
+	public HashMap<Integer, DatanodeInfo > read(String fileName, String address);
 	/*
 	 * Returns hashmap<block id, list of datanode info>
 	 */

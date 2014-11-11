@@ -43,25 +43,14 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		try {
-			registry.bind("namenode", this);
-		} catch (AccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (AlreadyBoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
 		
 	}
 	
 	
 	@Override
 	public DnRegistration register(String address, int port) {
-		DatanodeInfo newDatanode = new DatanodeInfo(address, port);
+		DatanodeInfo newDatanode = new DatanodeInfo(address, port, dataNodeCount);
 		availableDatanodes.add(dataNodeCount);
 		datanodes.put(dataNodeCount, newDatanode);
 		dataNodeCount++;
@@ -88,40 +77,27 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 
 
 	@Override
-	public HashMap<DatanodeInfo, List<Integer>> read(String fileName, String address) {
+	public HashMap<Integer, DatanodeInfo> read(String fileName, String address) {
 		List<Integer> fileBlocks = files.get("fileName");
-		HashMap<DatanodeInfo, List<Integer>> returnValue 
-			= new HashMap<DatanodeInfo, List<Integer>>();
+		HashMap<Integer, DatanodeInfo> returnValue 
+			= new HashMap<Integer, DatanodeInfo>();
 		if (fileBlocks == null) {
 			return null;
 		}
 		for (int blockId : fileBlocks) {
 			List<Integer> blockOnDatanodes = blocks.get(blockId);
-			int selectedDataNode = -1;
+			DatanodeInfo selectedDataNode = null;
 			for (int datanodeId : blockOnDatanodes) {
 				if (datanodes.get(datanodeId).getAddress().equals(address)) {
-					List<Integer> blocksOnReturnedDatanode = returnValue.get(datanodeId);
-					if (blocksOnReturnedDatanode == null) {
-						blocksOnReturnedDatanode = new ArrayList<Integer>();
-						returnValue.put(datanodes.get(datanodeId), blocksOnReturnedDatanode);
-					}
-					blocksOnReturnedDatanode.add(blockId);
-					selectedDataNode = datanodeId;
-					break;
+					selectedDataNode = datanodes.get(datanodeId);
 				}
 			}
-			if (selectedDataNode != -1) {
-				continue;
+			if (selectedDataNode == null) {
+				List<Integer> blockOnDatanodesPerm = new ArrayList<Integer>(blockOnDatanodes);
+				Collections.shuffle(blockOnDatanodesPerm);
+				selectedDataNode = datanodes.get(blockOnDatanodesPerm.get(0));
 			}
-			List<Integer> blockOnDatanodesCopy = new ArrayList<Integer>(blockOnDatanodes);
-			Collections.shuffle(blockOnDatanodesCopy);
-			selectedDataNode = blockOnDatanodesCopy.get(0);
-			List<Integer> blocksOnReturnedDatanode = returnValue.get(selectedDataNode);
-			if (blocksOnReturnedDatanode == null) {
-				blocksOnReturnedDatanode = new ArrayList<Integer>();
-				returnValue.put(datanodes.get(selectedDataNode), blocksOnReturnedDatanode);
-			}
-			blocksOnReturnedDatanode.add(blockId);
+			returnValue.put(blockId, selectedDataNode);
 			
 		}
 		return returnValue;
