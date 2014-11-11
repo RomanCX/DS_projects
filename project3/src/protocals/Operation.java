@@ -5,5 +5,6 @@ public enum Operation {
 	DELETE_DATA,
 	READ_DATA,
 	WRITE_DATA,
-	SHUT_DOWN
+	SHUT_DOWN,
+	NOOP
 }

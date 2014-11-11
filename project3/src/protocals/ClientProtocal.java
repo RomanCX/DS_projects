@@ -9,7 +9,7 @@ import namenode.DatanodeInfo;
 
 public interface ClientProtocal extends Remote{
 	/*
-	 * Returns hashmap<datanodeId, list of Block Ids>
+	 * Returns hashmap<block id, datanode info>
 	 */
 	public HashMap<Integer, DatanodeInfo > read(String fileName, String address);
 	/*
