@@ -31,10 +31,12 @@ import protocals.Operation;
 
 public class Namenode implements DatanodeProtocal, ClientProtocal {
 	private HashSet<Integer> availableDatanodes;
-	private HashMap<Integer, DatanodeInfo> datanodes;
-	private HashMap<String, List<Integer> > files;
-	private HashMap<Integer, List<Integer> > blocks;
-	private int dataNodeCount;
+	private HashMap<Integer, DatanodeInfo> datanodes;//<datanodeId, datanodeInfo>
+	private HashMap<String, List<Integer> > files;//<filename, blockIds>
+	private HashMap<Integer, List<Integer> > blocks;//<blockId, datanodeIds> 
+	private HashMap<Integer, List<Command>> commands;
+	private HashMap<Integer, HashSet<Integer>> datanodeBlocks;
+	private int datanodeCount;
 	private int blockCount;
 	private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 	private long lastWriteToDiskTime;
@@ -53,11 +55,13 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	
 	
 	public Namenode() {
-		datanodes = new HashMap<Integer, DatanodeInfo>();//<datanodeId, datanodeInfo>
-		files = new HashMap<String, List<Integer>>();//<filename, blockIds>
-		blocks = new HashMap<Integer, List<Integer>>();	//<blockId, datanodeIds> 
+		datanodes = new HashMap<Integer, DatanodeInfo>();
+		files = new HashMap<String, List<Integer>>();		
+		blocks = new HashMap<Integer, List<Integer>>();	
 		availableDatanodes = new HashSet<Integer>();
-		dataNodeCount = 0;
+		commands = new HashMap<Integer, List<Command>>();
+		datanodeBlocks = new HashMap<Integer, HashSet<Integer>>();
+		datanodeCount = 0;
 		blockCount = 0;
 		lastWriteToDiskTime = System.currentTimeMillis();
 		blockSize = DEFAULT_BLOCK_SIZE;
@@ -70,17 +74,18 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	public DnRegistration register(String address, int port) {
 		DnRegistration returnValue = null;
 		synchronized (datanodes) {
-			DatanodeInfo newDatanode = new DatanodeInfo(address, port, dataNodeCount);
-			availableDatanodes.add(dataNodeCount);
-			datanodes.put(dataNodeCount, newDatanode);
-			dataNodeCount++;
-			returnValue = new DnRegistration((dataNodeCount - 1), DEFAULT_HEARTBEAT_INTERVAL);
+			DatanodeInfo newDatanode = new DatanodeInfo(address, port, datanodeCount);
+			availableDatanodes.add(datanodeCount);
+			datanodes.put(datanodeCount, newDatanode);
+			datanodeBlocks.put(datanodeCount, new HashSet<Integer>());
+			datanodeCount++;
+			returnValue = new DnRegistration((datanodeCount - 1), DEFAULT_HEARTBEAT_INTERVAL);
 		}
 		return returnValue;
 	}
 	
 	@Override
-	public Command heartBeat(int nodeId, Map<Integer, String> blocks) {
+	public List<Command> heartBeat(int nodeId, Map<Integer, String> blocks) {
 		// TODO Not fully implemented
 		if (System.currentTimeMillis() - lastWriteToDiskTime >= DEFAULT_WRITE_TO_DISK_INTERVAL) {
 			writeToDisk();
@@ -94,7 +99,15 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	        	availableDatanodes.remove(pairs.getKey());
 	        }
 	    }
-	    return new Command(Operation.NOOP, new ArrayList<Integer>());
+	    
+	    List<Command> returnValue = commands.get(nodeId);
+	    if (returnValue == null) {
+	    	returnValue = new ArrayList<Command>();
+	    	returnValue.add(new Command());
+	    } else {
+	    	returnValue.remove(((Integer)nodeId));
+	    }
+	    return returnValue;
 	}
 
 	
@@ -188,11 +201,15 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 			for (int i = 0; i < splitNum; i++) {
 				Collections.shuffle(availableDatanodesPerm);
 				List<DatanodeInfo> datanodesForBlock = new ArrayList<DatanodeInfo>();
+				List<Integer> datanodeIdsForBlock = new ArrayList<Integer>();
 				returnValue.put(blockCount, datanodesForBlock);
 				for (int j = 0; j < replicaFactor; j++) {
-					datanodesForBlock.add(datanodes.get(availableDatanodesPerm.get(j)));
+					int selectedDatanodeId = availableDatanodesPerm.get(j);
+					datanodesForBlock.add(datanodes.get(selectedDatanodeId));
+					datanodeBlocks.get(selectedDatanodeId).add(blockCount);
+					datanodeIdsForBlock.add(selectedDatanodeId);
 				}
-				
+				blocks.put(blockCount, datanodeIdsForBlock);
 				blockCount++;
 			}
 			rwLock.writeLock().unlock();
@@ -222,7 +239,21 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 
 	@Override
 	public void delete(String fileName) {
-		//TODO
+		List<Integer> blocksForFIle = files.get(fileName);
+		for (int blockId : blocksForFIle) {
+			List<Integer> datanodeIdForBlock = blocks.get(blockId);
+			for (int datanodeId : datanodeIdForBlock) {
+				List<Command> commandsForDatanode = commands.get(datanodeId);
+				if (commandsForDatanode == null) {
+					commandsForDatanode = new ArrayList<Command>();
+					commands.put(datanodeId, commandsForDatanode);
+				}
+				commandsForDatanode.add(new Command(Operation.DELETE_DATA, blockId));
+				datanodeBlocks.get(datanodeId).remove(((Integer)blockId));
+			}
+			blocks.remove(((Integer)blockId));
+		}
+		files.remove(fileName);
 	}
 
 }

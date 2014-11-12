@@ -17,8 +17,13 @@ public class Command {
 		this.target = target;
 	}
 	
-	public Command(Operation operation) {
+	public Command() {
+		this.operation = Operation.NOOP;
+	}
+	
+	public Command(Operation operation, int blockId) {
 		this.operation = operation;
+		this.blockId = blockId;
 	}
 	
 	public DatanodeInfo getTarget() {
