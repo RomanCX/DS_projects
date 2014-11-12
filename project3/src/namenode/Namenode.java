@@ -8,6 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.rmi.AlreadyBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -24,14 +25,13 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import protocals.ClientProtocal;
 import protocals.Command;
-import protocals.DatanodeProtocal;
+import protocals.NamenodeProtocal;
 import protocals.DnRegistration;
 import protocals.Operation;
 
 
-public class Namenode implements DatanodeProtocal, ClientProtocal, Serializable {
+public class Namenode implements NamenodeProtocal, Serializable {
 	private HashSet<Integer> availableDatanodes;
 	private HashMap<Integer, DatanodeInfo> datanodes;//<datanodeId, datanodeInfo>
 	private HashMap<String, List<Integer> > files;//<filename, blockIds>
@@ -134,7 +134,7 @@ public class Namenode implements DatanodeProtocal, ClientProtocal, Serializable 
 			namenode = new Namenode();
 		}
 		namenode.readConfigFile();
-		Namenode namenodeStub = (Namenode)UnicastRemoteObject.exportObject(namenode, 0);
+		NamenodeProtocal namenodeStub = (NamenodeProtocal)UnicastRemoteObject.exportObject(namenode, 0);
 		Registry registry = LocateRegistry.getRegistry();
 		registry.rebind(NAMENODE_RMI_NAME, namenodeStub);
 	}

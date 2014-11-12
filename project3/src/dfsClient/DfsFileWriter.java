@@ -13,20 +13,20 @@ import java.util.TreeMap;
 
 import datanode.Block;
 import namenode.DatanodeInfo;
-import protocals.ClientProtocal;
 import protocals.Command;
+import protocals.NamenodeProtocal;
 import protocals.Operation;
 
 public class DfsFileWriter {
 	
 	// protocol used to communicate with namenode
-	private ClientProtocal namenode;
+	private NamenodeProtocal namenode;
 	// block size in bytes
 	private int blockSize;
 	
 	public DfsFileWriter(String address, int port) throws Exception {
 		Registry registry = LocateRegistry.getRegistry(address, port);
-		namenode = (ClientProtocal)registry.lookup("namenode");
+		namenode = (NamenodeProtocal)registry.lookup("namenode");
 		blockSize = namenode.getBlockSize();
 	}
 	

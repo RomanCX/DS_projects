@@ -1,15 +1,17 @@
 package protocals;
 
-import java.net.InetAddress;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 
 import namenode.DatanodeInfo;
 
-public interface ClientProtocal extends Remote{
+
+public interface NamenodeProtocal extends Remote {
+	public DnRegistration register(String address, int port) throws RemoteException	;
+	public List<Command> heartBeat(int nodeId, Map<Integer, String> blocks) throws RemoteException;
 	/*
 	 * Returns hashmap<block id, datanode info>
 	 */
@@ -24,5 +26,5 @@ public interface ClientProtocal extends Remote{
 	 */
 	public int getBlockSize() throws RemoteException;
 	
-	public void delete(String fileName) throws RemoteException;
+	public void delete(String fileName) throws RemoteException;;
 }

@@ -12,8 +12,8 @@ import java.util.StringTokenizer;
 
 import namenode.DatanodeInfo;
 import datanode.Block;
-import protocals.ClientProtocal;
 import protocals.Command;
+import protocals.NamenodeProtocal;
 import protocals.Operation;
 
 public class Client {
@@ -24,7 +24,7 @@ public class Client {
 	private static int port;
 	// address of client
 	private static String myAddress;
-	private static ClientProtocal namenode;
+	private static NamenodeProtocal namenode;
 	
 	
 	/*
@@ -47,7 +47,7 @@ public class Client {
 		
 		try {
 			Registry registry = LocateRegistry.getRegistry(args[0], Integer.parseInt(args[1]));
-			namenode = (ClientProtocal)registry.lookup("namenode");
+			namenode = (NamenodeProtocal)registry.lookup("namenode");
 		} catch (Exception e) {
 			System.out.println("fail to get namenode");
 			System.exit(1);

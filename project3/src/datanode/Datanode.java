@@ -23,7 +23,7 @@ import java.util.Properties;
 
 import namenode.DatanodeInfo;
 import protocals.Command;
-import protocals.DatanodeProtocal;
+import protocals.NamenodeProtocal;
 import protocals.DnRegistration;
 import protocals.Operation;
 
@@ -48,7 +48,7 @@ public class Datanode implements Runnable {
 	// interval of hearbeat;
 	private long heartBeatInterval; 
 	// a remote object contains methods used to communicate with namenode
-	private DatanodeProtocal namenode; 
+	private NamenodeProtocal namenode; 
 	// indicate if datanode should stop running
 	private boolean stop;
 	// path for datanode image
@@ -96,7 +96,7 @@ public class Datanode implements Runnable {
 			
 			// register datanode on namenode 
 			Registry registry = LocateRegistry.getRegistry(namenodeAddr);
-			namenode = (DatanodeProtocal)registry.lookup("namenode");
+			namenode = (NamenodeProtocal)registry.lookup("namenode");
 			myAddr = InetAddress.getLocalHost().getHostName();
 			DnRegistration dr = namenode.register(myAddr, myPort);
 			nodeId = dr.getNodeId();

@@ -14,19 +14,19 @@ import java.util.List;
 
 import datanode.Block;
 import namenode.DatanodeInfo;
-import protocals.ClientProtocal;
 import protocals.Command;
+import protocals.NamenodeProtocal;
 import protocals.Operation;
 
 public class DfsFileReader {
 	
 	// protocol used to communicate with namenode
-	ClientProtocal namenode;
+	NamenodeProtocal namenode;
 	
 	public DfsFileReader(String address, int port) throws Exception {
 		
 		Registry registry = LocateRegistry.getRegistry(address, port);
-		namenode = (ClientProtocal)registry.lookup("namenode");
+		namenode = (NamenodeProtocal)registry.lookup("namenode");
 	}
 	
 	/*
