@@ -105,7 +105,7 @@ public class DfsFileWriter {
 	private int split(String fileName) {
 		File f = new File(fileName);
 		long fileSize = f.length();
-		if (fileSize / blockSize == 0)
+		if (fileSize % blockSize == 0)
 			return (int)(fileSize / blockSize);
 		else
 			return (int)(fileSize / blockSize + 1);

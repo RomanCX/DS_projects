@@ -93,6 +93,7 @@ public class Datanode implements Runnable {
 			// pick a free port
 			ServerSocket tmp = new ServerSocket(0);
 			myPort = tmp.getLocalPort();
+			tmp.close();
 			
 			// register datanode on namenode 
 			Registry registry = LocateRegistry.getRegistry(namenodeAddr);
@@ -259,6 +260,7 @@ public class Datanode implements Runnable {
 		try {
 			listen = new ServerSocket(myPort);
 		} catch (Exception e) {
+			e.printStackTrace();
 			System.out.println("unable to listen on port " + myPort);
 			return;
 		}

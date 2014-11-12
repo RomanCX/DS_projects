@@ -45,13 +45,8 @@ public class Client {
 			e.printStackTrace();
 		}
 		
-		try {
-			Registry registry = LocateRegistry.getRegistry(args[0], Integer.parseInt(args[1]));
-			namenode = (NamenodeProtocal)registry.lookup("namenode");
-		} catch (Exception e) {
-			System.out.println("fail to get namenode");
-			System.exit(1);
-		}
+		address = args[0];
+		port = Integer.parseInt(args[1]);
 		
 		Scanner scanner = new Scanner(System.in);
 		String command = null;
@@ -83,6 +78,9 @@ public class Client {
 			else if (splits[0].equals("ls")) {
 				executeLs(splits[1]);
 			}
+			else if (splits[0].equals("quit")) {
+				System.exit(0);
+			}
 			else {
 				System.out.println("Unknow command");
 			}
@@ -113,6 +111,7 @@ public class Client {
 				System.out.println("fail to write " + localPath + " to " + dfsPath);
 			}
 		} catch (Exception e) {
+			e.printStackTrace();
 			System.out.println("fail to get writer");
 		}
 		
