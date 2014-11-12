@@ -1,6 +1,7 @@
 package dfsClient;
 
 import java.net.InetAddress;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class Client {
 	 *  (1) get dfs://path path
 	 *  (2) put path dfs://path
 	 *  (3) ls dfs://path
+	 *  (4) delete dfs://path
 	 */
 	public static void main(String[] args) {
 		if (args.length != 2) {
@@ -78,6 +80,9 @@ public class Client {
 			else if (splits[0].equals("ls")) {
 				executeLs(splits[1]);
 			}
+			else if (splits[0].equals("delete")) {
+				executeDel(splits[1]);
+			}
 			else if (splits[0].equals("quit")) {
 				System.exit(0);
 			}
@@ -118,6 +123,21 @@ public class Client {
 	}
 	
 	private static void executeLs(String dfsPath) {
-		
+		try {
+			List<String> files = namenode.ls();
+			for (String file : files) {
+				System.out.println(file);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private static void executeDel(String dfsPath) {
+		try {
+			namenode.delete(dfsPath);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }
