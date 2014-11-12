@@ -129,8 +129,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
 			namenode = (Namenode)ois.readObject();
 			ois.close();
-		}
-		else {
+		} else {
 			namenode = new Namenode();
 		}
 		namenode.readConfigFile();

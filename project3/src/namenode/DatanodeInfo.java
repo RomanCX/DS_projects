@@ -1,6 +1,8 @@
 package namenode;
 
-public class DatanodeInfo {
+import java.io.Serializable;
+
+public class DatanodeInfo implements Serializable {
 	private String address;
 	private int port;
 	private int id;
@@ -43,5 +45,9 @@ public class DatanodeInfo {
 	public void heartBeat() {
 		status = DatanodeStatus.ALIVE;
 		lastHeartbeatTime = System.currentTimeMillis();
+	}
+	
+	public int getId() {
+		return id;
 	}
 }

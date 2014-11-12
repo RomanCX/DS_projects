@@ -1,6 +1,8 @@
 package datanode;
 
-public class Block {
+import java.io.Serializable;
+
+public class Block implements Serializable {
 	private String data; // now we assume the data is string
 	private int id;
 	

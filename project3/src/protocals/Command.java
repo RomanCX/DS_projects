@@ -1,11 +1,12 @@
 package protocals;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import namenode.DatanodeInfo;
 
-public class Command {
+public class Command implements Serializable {
 	
 	public Operation operation;
 	private DatanodeInfo target;

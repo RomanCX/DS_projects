@@ -1,6 +1,8 @@
 package namenode;
 
-public enum DatanodeStatus {
+import java.io.Serializable;
+
+public enum DatanodeStatus implements Serializable {
 	ALIVE,
 	DEAD
 }
