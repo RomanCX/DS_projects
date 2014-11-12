@@ -40,10 +40,11 @@ public class DfsFileWriter {
 		int pos = dfsPath.indexOf("//");
 		dfsPath = "/" + dfsPath.substring(pos + 2);
 		// blockId : list of datanode to be written
-		TreeMap<Integer, List<DatanodeInfo>> blockToDn = namenode.write(dfsPath, splitNum);
 		
-		try {
-			BufferedReader br = new BufferedReader(new FileReader(fileName));
+		
+		try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+			TreeMap<Integer, List<DatanodeInfo>> blockToDn = namenode.write(dfsPath, splitNum);
+			
 			String line = null;
 			String prevLine = null;
 			Block block = null;
@@ -70,7 +71,6 @@ public class DfsFileWriter {
 					}
 				}
 			}
-			br.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;

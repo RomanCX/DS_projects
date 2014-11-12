@@ -11,6 +11,7 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class Datanode implements Runnable {
 	private void loadConfiguration() {
 		Properties pro = new Properties();
 		try {
-			pro.loadFromXML(new FileInputStream(cnfFile));
+			pro.load(new FileReader(cnfFile));
 			// assume the format of fs.default.name is dfs://hostname:port
 			String name = pro.getProperty("fs.default.name");
 			int pos1 = name.indexOf("//");
@@ -78,6 +79,10 @@ public class Datanode implements Runnable {
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
+		
+		System.out.println(namenodeAddr);
+		System.out.println(namenodePort);
+		System.out.println(dataDir);
 	}
 	
 	/* Start datanode */
@@ -112,6 +117,7 @@ public class Datanode implements Runnable {
 			// start listening
 			new Thread(this).start();
 		} catch (Exception e) {
+			e.printStackTrace();
 			System.out.println("datanode fails to start");
 			System.exit(1);
 		}
@@ -126,7 +132,12 @@ public class Datanode implements Runnable {
 		lastBeat = 0;
 		do {
 			lastBeat = System.currentTimeMillis();
-			commands = namenode.heartBeat(nodeId, blockMap);
+			try {
+				commands = namenode.heartBeat(nodeId, blockMap);
+			} catch (RemoteException e) {
+				continue;
+			}
+			
 			for (Command command : commands) {
 				switch (command.operation) {
 				case FETCH_DATA:

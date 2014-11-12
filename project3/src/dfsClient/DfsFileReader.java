@@ -44,8 +44,8 @@ public class DfsFileReader {
 			e.printStackTrace();
 		}
 		
-		TreeMap<Integer, DatanodeInfo> blockToDn = namenode.read(dfsPath, address);
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName))) {
+			TreeMap<Integer, DatanodeInfo> blockToDn = namenode.read(dfsPath, address);
 			for (int blockId : blockToDn.keySet()) {
 				Block b = getBlock(blockId, blockToDn.get(blockId));
 				if (b == null) {
