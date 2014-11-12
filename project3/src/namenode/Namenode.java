@@ -202,14 +202,16 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			int replicaFactor = availableDatanodes.size() < this.replicaFactor ? 
 				availableDatanodes.size() : this.replicaFactor;
 			List<Integer> availableDatanodesPerm = new ArrayList<Integer>(availableDatanodes);
+			List<Integer> fileBlocks = new ArrayList<Integer>();
 			for (int i = 0; i < splitNum; i++) {
 				Collections.shuffle(availableDatanodesPerm);
 				List<DatanodeInfo> datanodesForBlock = new ArrayList<DatanodeInfo>();
 				List<Integer> datanodeIdsForBlock = new ArrayList<Integer>();
 				returnValue.put(blockCount, datanodesForBlock);
 				for (int j = 0; j < replicaFactor; j++) {
+					fileBlocks.add(blockCount);
 					int selectedDatanodeId = availableDatanodesPerm.get(j);
-					System.out.println("Write block " + blockCount + " to datanode selectedDatanodeId");
+					System.out.println("Write block " + blockCount + " to datanode" + selectedDatanodeId);
 					datanodesForBlock.add(datanodes.get(selectedDatanodeId));
 					datanodeBlocks.get(selectedDatanodeId).add(blockCount);
 					datanodeIdsForBlock.add(selectedDatanodeId);
@@ -217,6 +219,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				blocks.put(blockCount, datanodeIdsForBlock);
 				blockCount++;
 			}
+			files.put(fileName, fileBlocks);
 			rwLock.writeLock().unlock();
 		}
 		return returnValue;
