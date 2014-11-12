@@ -134,6 +134,7 @@ public class Datanode implements Runnable {
 		do {
 			lastBeat = System.currentTimeMillis();
 			try {
+				System.out.println("heart beat");
 				commands = namenode.heartBeat(nodeId, blockMap);
 			} catch (RemoteException e) {
 				continue;
@@ -142,13 +143,17 @@ public class Datanode implements Runnable {
 			for (Command command : commands) {
 				switch (command.operation) {
 				case FETCH_DATA:
+					System.out.println("fetch data");
 					fetchData(command.getBlockId(), command.getTarget());
 					break;
 				case DELETE_DATA:
+					System.out.println("delete data");
 					deleteData(command.getBlockId());
 					break;
 				case SHUT_DOWN:
+					System.out.println("shut down");
 					shutDown();
+					break;
 				default:
 					break;
 				}
