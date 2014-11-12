@@ -83,6 +83,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			datanodeCount++;
 			returnValue = new DnRegistration((datanodeCount - 1), DEFAULT_HEARTBEAT_INTERVAL);
 		}
+		System.out.println("Datanode Registered: " + (datanodeCount - 1));
 		return returnValue;
 	}
 	
@@ -188,6 +189,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				}
 			}
 		}
+		System.out.println("Seleted datanode: " + selectedDatanode.getId());
 		return selectedDatanode;
 	}
 
@@ -207,6 +209,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				returnValue.put(blockCount, datanodesForBlock);
 				for (int j = 0; j < replicaFactor; j++) {
 					int selectedDatanodeId = availableDatanodesPerm.get(j);
+					System.out.println("Write block " + blockCount + " to datanode selectedDatanodeId");
 					datanodesForBlock.add(datanodes.get(selectedDatanodeId));
 					datanodeBlocks.get(selectedDatanodeId).add(blockCount);
 					datanodeIdsForBlock.add(selectedDatanodeId);
@@ -256,6 +259,18 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			blocks.remove(((Integer)blockId));
 		}
 		files.remove(fileName);
+	}
+
+
+	@Override
+	public List<String> ls() throws RemoteException {
+		List<String> returnValue = new ArrayList<String>();
+		Iterator<Entry<String, List<Integer>>> iterator = files.entrySet().iterator();
+		while (iterator.hasNext()) {
+			Entry<String, List<Integer>> pair = iterator.next();
+			returnValue.add(pair.getKey());
+		}
+		return returnValue;
 	}
 
 }

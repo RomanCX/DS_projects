@@ -26,5 +26,7 @@ public interface NamenodeProtocal extends Remote {
 	 */
 	public int getBlockSize() throws RemoteException;
 	
-	public void delete(String fileName) throws RemoteException;;
+	public void delete(String fileName) throws RemoteException;
+	
+	public List<String> ls() throws RemoteException;
 }
