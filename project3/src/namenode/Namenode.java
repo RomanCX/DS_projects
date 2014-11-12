@@ -136,7 +136,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 		}
 		namenode.readConfigFile();
 		NamenodeProtocal namenodeStub = (NamenodeProtocal)UnicastRemoteObject.exportObject(namenode, 0);
-		Registry registry = LocateRegistry.getRegistry();
+		Registry registry = LocateRegistry.createRegistry(port);
 		registry.rebind(NAMENODE_RMI_NAME, namenodeStub);
 	}
 
