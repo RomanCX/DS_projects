@@ -41,14 +41,19 @@ public class Client {
 			System.exit(1);
 		}
 		
+		address = args[0];
+		port = Integer.parseInt(args[1]);
+		
 		try {
 			myAddress = InetAddress.getLocalHost().getHostName();
+			Registry registry = LocateRegistry.getRegistry(address, port);
+			namenode = (NamenodeProtocal)registry.lookup("namenode");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
-		address = args[0];
-		port = Integer.parseInt(args[1]);
+		
+		
 		
 		Scanner scanner = new Scanner(System.in);
 		String command = null;
