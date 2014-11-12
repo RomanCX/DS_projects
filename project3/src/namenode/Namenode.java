@@ -156,13 +156,14 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			= new TreeMap<Integer, DatanodeInfo>();
 		synchronized (datanodes) {
 			rwLock.readLock().lock();;
-			List<Integer> fileBlocks = files.get("fileName");
+			List<Integer> fileBlocks = files.get(fileName);
 			if (fileBlocks == null) {
 				return null;
 			}
 			for (int blockId : fileBlocks) {
 				List<Integer> datanodesContainingBlock = blocks.get(blockId);
 				DatanodeInfo selectedDataNode = selectDatanode(address, datanodesContainingBlock);
+				System.out.println("Read: block " + blockId + " from datanode " + selectedDataNode.getId());
 				returnValue.put(blockId, selectedDataNode);
 			}
 			rwLock.readLock().unlock();
@@ -211,7 +212,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				for (int j = 0; j < replicaFactor; j++) {
 					fileBlocks.add(blockCount);
 					int selectedDatanodeId = availableDatanodesPerm.get(j);
-					System.out.println("Write block " + blockCount + " to datanode" + selectedDatanodeId);
+					System.out.println("Write block " + blockCount + " to datanode " + selectedDatanodeId);
 					datanodesForBlock.add(datanodes.get(selectedDatanodeId));
 					datanodeBlocks.get(selectedDatanodeId).add(blockCount);
 					datanodeIdsForBlock.add(selectedDatanodeId);
