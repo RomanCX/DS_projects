@@ -89,6 +89,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	
 	@Override
 	public List<Command> heartBeat(int nodeId, Map<Integer, String> blocks) {
+		System.out.println("Heartbeat from datanode " + nodeId);
 		// TODO Not fully implemented
 		if (System.currentTimeMillis() - lastWriteToDiskTime >= DEFAULT_WRITE_TO_DISK_INTERVAL) {
 			writeToDisk();
@@ -259,6 +260,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				}
 				commandsForDatanode.add(new Command(Operation.DELETE_DATA, blockId));
 				datanodeBlocks.get(datanodeId).remove(((Integer)blockId));
+				System.out.println("Delete: block " + blockId + " on datanode " + datanodeId);
 			}
 			blocks.remove(((Integer)blockId));
 		}
