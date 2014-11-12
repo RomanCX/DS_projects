@@ -109,7 +109,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	    	returnValue = new ArrayList<Command>();
 	    	returnValue.add(new Command());
 	    } else {
-	    	returnValue.remove(((Integer)nodeId));
+	    	commands.remove(((Integer)nodeId));
 	    }
 	    return returnValue;
 	}
