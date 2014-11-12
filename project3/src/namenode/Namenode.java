@@ -3,11 +3,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.rmi.AccessException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -19,7 +17,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import protocals.ClientProtocal;
@@ -40,13 +40,16 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	private long lastWriteToDiskTime;
 	private int blockSize;
 	private int replicaFactor;
-	private int registryPort;
+	private String namenodeImageFilename;
 	
 	public static final int DEFAULT_HEARTBEAT_INTERVAL = 3000;//ms
 	public static final int DEFAULT_WRITE_TO_DISK_INTERVAL = 10000;//ms
 	public static final int DEFAULT_REPLICA_FACTOR = 3;
 	public static final String NAMENODE_RMI_NAME = "namenode";
-	public static final String NAMENODE_IMAGE_FILENAME = "namenode_image";
+	public static final String DEFAULT_NAMENODE_IMAGE_FILENAME = "namenode_image";
+	public static final int DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
+	public static final int DEFAULT_REGISTRY_PORT = 33333;
+	public static final String CONFIG_FILE_NAME = "namenode.cnf";
 	
 	
 	public Namenode() {
@@ -57,6 +60,9 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 		dataNodeCount = 0;
 		blockCount = 0;
 		lastWriteToDiskTime = System.currentTimeMillis();
+		blockSize = DEFAULT_BLOCK_SIZE;
+		replicaFactor = DEFAULT_REPLICA_FACTOR;
+		namenodeImageFilename = DEFAULT_NAMENODE_IMAGE_FILENAME;
 	}
 	
 	
@@ -92,9 +98,18 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	}
 
 	
-	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException {
+	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException, AlreadyBoundException {
+		Properties pro = new Properties();
+		try {
+			pro.loadFromXML(new FileInputStream(CONFIG_FILE_NAME));
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+		String imageFilename = pro.getProperty("dfs.name.dir", DEFAULT_NAMENODE_IMAGE_FILENAME);
+		String addressPort = pro.getProperty("fs.default.name", "localhost:" + Integer.toString(DEFAULT_REGISTRY_PORT));
+		int port = Integer.parseInt(addressPort.substring(addressPort.indexOf(':')));
 		Namenode namenode;
-		File f = new File(NAMENODE_IMAGE_FILENAME);
+		File f = new File(imageFilename);
 		if (f.exists()) {
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
 			namenode = (Namenode)ois.readObject();
@@ -103,28 +118,26 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 		else {
 			namenode = new Namenode();
 		}
-		try {
-			Registry registry = LocateRegistry.getRegistry();
-			registry.bind(NAMENODE_RMI_NAME, namenode);
-		} catch (RemoteException | AlreadyBoundException e) {
-			e.printStackTrace();
-		}
+		LocateRegistry.createRegistry(port);
+		Registry registry = LocateRegistry.getRegistry();
+		registry.bind(NAMENODE_RMI_NAME, namenode);
 	}
 
 	private void writeToDisk() {
-		File f = new File(NAMENODE_IMAGE_FILENAME);
+		File f = new File(namenodeImageFilename);
 		try {
 			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(f));
 			oos.writeObject(this);
+			oos.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	@Override
-	public HashMap<Integer, DatanodeInfo> read(String fileName, String address) {
-		HashMap<Integer, DatanodeInfo> returnValue 
-			= new HashMap<Integer, DatanodeInfo>();
+	public TreeMap<Integer, DatanodeInfo> read(String fileName, String address) {
+		TreeMap<Integer, DatanodeInfo> returnValue 
+			= new TreeMap<Integer, DatanodeInfo>();
 		synchronized (datanodes) {
 			rwLock.readLock().lock();;
 			List<Integer> fileBlocks = files.get("fileName");
@@ -164,13 +177,13 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	}
 
 	@Override
-	public HashMap<Integer, List<DatanodeInfo>> write(String fileName, int splitNum) {
-		HashMap<Integer, List<DatanodeInfo>> returnValue = 
-			new HashMap<Integer, List<DatanodeInfo>>();
+	public TreeMap<Integer, List<DatanodeInfo>> write(String fileName, int splitNum) {
+		TreeMap<Integer, List<DatanodeInfo>> returnValue = 
+			new TreeMap<Integer, List<DatanodeInfo>>();
 		synchronized (datanodes) {
 			rwLock.writeLock().lock();
-			int replicaFactor = availableDatanodes.size() < DEFAULT_REPLICA_FACTOR ? 
-				availableDatanodes.size() : DEFAULT_REPLICA_FACTOR;
+			int replicaFactor = availableDatanodes.size() < this.replicaFactor ? 
+				availableDatanodes.size() : this.replicaFactor;
 			List<Integer> availableDatanodesPerm = new ArrayList<Integer>(availableDatanodes);
 			for (int i = 0; i < splitNum; i++) {
 				Collections.shuffle(availableDatanodesPerm);
@@ -185,6 +198,31 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 			rwLock.writeLock().unlock();
 		}
 		return returnValue;
+	}
+
+
+	@Override
+	public int getBlockSize() {
+		return blockSize;
+	}
+	
+	public void readConfigFile() {
+		Properties pro = new Properties();
+		try {
+			pro.loadFromXML(new FileInputStream(CONFIG_FILE_NAME));
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+		blockSize = Integer.parseInt(pro.getProperty("dfs.block.size", 
+				Integer.toString(DEFAULT_BLOCK_SIZE)));
+		replicaFactor = Integer.parseInt(pro.getProperty("dfs.replication", Integer.toString(DEFAULT_REPLICA_FACTOR)));
+		namenodeImageFilename = pro.getProperty("dfs.name.dir", DEFAULT_NAMENODE_IMAGE_FILENAME);
+	}
+
+
+	@Override
+	public void delete(String fileName) {
+		//TODO
 	}
 
 }

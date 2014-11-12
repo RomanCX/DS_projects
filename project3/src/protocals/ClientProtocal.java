@@ -22,4 +22,6 @@ public interface ClientProtocal extends Remote{
 	 *  Get the size of block
 	 */
 	public int getBlockSize();
+	
+	public void delete(String fileName);
 }
