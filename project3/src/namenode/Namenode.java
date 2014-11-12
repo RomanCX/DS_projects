@@ -6,10 +6,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,7 +31,7 @@ import protocals.DnRegistration;
 import protocals.Operation;
 
 
-public class Namenode implements DatanodeProtocal, ClientProtocal {
+public class Namenode implements DatanodeProtocal, ClientProtocal, Serializable {
 	private HashSet<Integer> availableDatanodes;
 	private HashMap<Integer, DatanodeInfo> datanodes;//<datanodeId, datanodeInfo>
 	private HashMap<String, List<Integer> > files;//<filename, blockIds>
@@ -50,7 +52,7 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	public static final String NAMENODE_RMI_NAME = "namenode";
 	public static final String DEFAULT_NAMENODE_IMAGE_FILENAME = "namenode_image";
 	public static final int DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
-	public static final int DEFAULT_REGISTRY_PORT = 33333;
+	public static final int DEFAULT_REGISTRY_PORT = 1099;
 	public static final String CONFIG_FILE_NAME = "namenode.cnf";
 	
 	
@@ -114,13 +116,13 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	public static void main(String[] args) throws FileNotFoundException, IOException, ClassNotFoundException, AlreadyBoundException {
 		Properties pro = new Properties();
 		try {
-			pro.loadFromXML(new FileInputStream(CONFIG_FILE_NAME));
+			pro.load(new FileInputStream(CONFIG_FILE_NAME));
 		} catch(Exception e) {
-			e.printStackTrace();
+			System.err.println("Failed to read config file");
 		}
 		String imageFilename = pro.getProperty("dfs.name.dir", DEFAULT_NAMENODE_IMAGE_FILENAME);
 		String addressPort = pro.getProperty("fs.default.name", "localhost:" + Integer.toString(DEFAULT_REGISTRY_PORT));
-		int port = Integer.parseInt(addressPort.substring(addressPort.indexOf(':')));
+		int port = Integer.parseInt(addressPort.substring(addressPort.indexOf(':') + 1));
 		Namenode namenode;
 		File f = new File(imageFilename);
 		if (f.exists()) {
@@ -131,9 +133,10 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 		else {
 			namenode = new Namenode();
 		}
-		LocateRegistry.createRegistry(port);
+		namenode.readConfigFile();
+		Namenode namenodeStub = (Namenode)UnicastRemoteObject.exportObject(namenode, 0);
 		Registry registry = LocateRegistry.getRegistry();
-		registry.bind(NAMENODE_RMI_NAME, namenode);
+		registry.rebind(NAMENODE_RMI_NAME, namenodeStub);
 	}
 
 	private void writeToDisk() {
@@ -226,7 +229,7 @@ public class Namenode implements DatanodeProtocal, ClientProtocal {
 	public void readConfigFile() {
 		Properties pro = new Properties();
 		try {
-			pro.loadFromXML(new FileInputStream(CONFIG_FILE_NAME));
+			pro.load(new FileInputStream(CONFIG_FILE_NAME));
 		} catch(Exception e) {
 			e.printStackTrace();
 		}

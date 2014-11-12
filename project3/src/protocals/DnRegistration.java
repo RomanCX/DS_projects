@@ -1,6 +1,8 @@
 package protocals;
 
-public class DnRegistration {
+import java.io.Serializable;
+
+public class DnRegistration implements Serializable {
 	int nodeId;
 	int interval;
 	public DnRegistration(int nodeId, int interval) {
