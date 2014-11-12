@@ -140,7 +140,7 @@ public class Client {
 	
 	private static void executeDel(String dfsPath) {
 		int pos = dfsPath.indexOf("//");
-		dfsPath = dfsPath.substring(pos + 2);
+		dfsPath = "/" + dfsPath.substring(pos + 2);
 		try {
 			namenode.delete(dfsPath);
 		} catch (Exception e) {
