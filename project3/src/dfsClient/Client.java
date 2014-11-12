@@ -18,7 +18,12 @@ import protocals.Operation;
 
 public class Client {
 	private static final String prompt = ">>";
+	// address of namenode
 	private static String address;
+	// port number of namenode
+	private static int port;
+	// address of client
+	private static String myAddress;
 	private static ClientProtocal namenode;
 	
 	
@@ -29,15 +34,19 @@ public class Client {
 	 *  (3) ls dfs://path
 	 */
 	public static void main(String[] args) {
+		if (args.length != 2) {
+			System.out.println("Usage: <namenode address> <namenode port>");
+			System.exit(1);
+		}
 		
 		try {
-			address = InetAddress.getLocalHost().getHostName();
+			myAddress = InetAddress.getLocalHost().getHostName();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		
 		try {
-			Registry registry = LocateRegistry.getRegistry();
+			Registry registry = LocateRegistry.getRegistry(args[0], Integer.parseInt(args[1]));
 			namenode = (ClientProtocal)registry.lookup("namenode");
 		} catch (Exception e) {
 			System.out.println("fail to get namenode");
@@ -81,21 +90,31 @@ public class Client {
 	}
 	
 	private static void executeGet(String dfsPath, String localPath) {
-		int pos = dfsPath.indexOf("//");
-		dfsPath = "/" + dfsPath.substring(pos + 1);
-		Map<DatanodeInfo, List<Integer>> blockInfo = namenode.read(dfsPath, address);
-		
-		List<Block> blocks = new ArrayList<Block>();
-		Iterator iter = blockInfo.entrySet().iterator();
-		while (iter.hasNext()) {
-			Map.Entry entry = (Map.Entry)(iter.next());
-			int datanodeId = (int)entry.getKey();
-			List<Integer> blockIds = (List<Integer>)entry.getValue();
-			
+		try {
+			DfsFileReader reader = new DfsFileReader(address, port);
+			if (reader.read(dfsPath, localPath) == true) {
+				System.out.println("Got " + dfsPath + " from dfs");
+			}
+			else {
+				System.out.println("fail to get" + dfsPath);
+			}
+		} catch (Exception e) {
+			System.out.println("fail to get reader");
 		}
 	}
 	
 	private static void executePut(String localPath, String dfsPath) {
+		try {
+			DfsFileWriter writer = new DfsFileWriter(address, port);
+			if (writer.write(localPath, dfsPath) == true) {
+				System.out.println(localPath + "has been put to " + dfsPath);
+			}
+			else {
+				System.out.println("fail to write " + localPath + " to " + dfsPath);
+			}
+		} catch (Exception e) {
+			System.out.println("fail to get writer");
+		}
 		
 	}
 	

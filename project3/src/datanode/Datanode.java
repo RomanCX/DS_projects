@@ -2,6 +2,7 @@ package datanode;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.ObjectInputStream;
@@ -31,11 +32,13 @@ public class Datanode implements Runnable {
 	private static final String cnfFile = "datanode.cnf";
 	//host name of namenode
 	private String namenodeAddr; 
-	//host name of datanode
+	// port numberof namenode
+	private int namenodePort;
+	// host name of datanode
 	private String myAddr; 
-	//port number of datanode
+	// port number of datanode
 	private int myPort; 
-	//directory to store data files
+	// directory to store data files
 	private String dataDir; 
 	// id of this node
 	private int nodeId;
@@ -45,9 +48,13 @@ public class Datanode implements Runnable {
 	private long heartBeatInterval; 
 	// a remote object contains methods used to communicate with namenode
 	private DatanodeProtocal namenode; 
+	// indicate if datanode should stop running
+	private boolean stop;
+	// path for datanode image
+	private String imageFile;
 	
 	public Datanode() {
-		
+		stop = false;
 	}
 	
 	/* Load configuration of datanode from file */
@@ -55,8 +62,19 @@ public class Datanode implements Runnable {
 		Properties pro = new Properties();
 		try {
 			pro.loadFromXML(new FileInputStream(cnfFile));
-			namenodeAddr = pro.getProperty("dfs.namenode");
+			// assume the format of fs.default.name is dfs://hostname:port
+			String name = pro.getProperty("fs.default.name");
+			int pos1 = name.indexOf("//");
+			int pos2 = name.indexOf(":", pos1 + 2);
+			namenodeAddr = name.substring(pos1 + 2, pos2);
+			namenodePort = Integer.parseInt(name.substring(pos2 + 1));
+			
+			// format name and datadir
 			dataDir = pro.getProperty("dfs.data.dir");
+			int length = dataDir.length();
+			if (length > 1 && dataDir.charAt(length - 1) == '/')
+				dataDir = dataDir.substring(0, length - 1);
+			
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -80,7 +98,8 @@ public class Datanode implements Runnable {
 			heartBeatInterval = dr.getInterval();
 			
 			// load image of datanode from file if it exists
-			File f = new File(dataDir + "/datanode-image");
+			imageFile = dataDir + "/datanode-image";
+			File f = new File(imageFile);
 			if (f.exists()) {
 				ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
 				blockMap = (Map<Integer, String>)ois.readObject();
@@ -101,24 +120,27 @@ public class Datanode implements Runnable {
 	}
 	
 	private void offerService() {
-		Command command = null;
+		List<Command> commands = null;
 		long timeLeft, lastBeat, now;
 		
 		lastBeat = 0;
 		do {
 			lastBeat = System.currentTimeMillis();
-			command = namenode.heartBeat(nodeId, blockMap);
-			switch (command.operation) {
-			case FETCH_DATA:
-				fetch_data(command);
-				break;
-			case DELETE_DATA:
-				delete_data(command);
-				break;
-			default:
-				break;
+			commands = namenode.heartBeat(nodeId, blockMap);
+			for (Command command : commands) {
+				switch (command.operation) {
+				case FETCH_DATA:
+					fetchData(command.getBlockId(), command.getTarget());
+					break;
+				case DELETE_DATA:
+					deleteData(command.getBlockId());
+					break;
+				case SHUT_DOWN:
+					shutDown();
+				default:
+					break;
+				}
 			}
-			
 			// sleep heartBeatInterval time and do next heart beat
 			now = System.currentTimeMillis();
 			timeLeft = lastBeat + heartBeatInterval - now;
@@ -132,7 +154,7 @@ public class Datanode implements Runnable {
 				timeLeft = lastBeat + heartBeatInterval - now;
 			}
 			
-		} while(true);
+		} while(stop == false);
 	}
 	
 	/* Write the data into local file */
@@ -146,90 +168,46 @@ public class Datanode implements Runnable {
 		}
 	}
 	
-	/* Fetch blocks from other datanodes */
-	private void fetch_data(Command command) {
-		List<DatanodeInfo> targets = command.getTargets();
-		List<Integer> blockIds = command.getBlockIds();
-		
-		Map<DatanodeInfo, ArrayList<Integer>> m = 
-				new HashMap<DatanodeInfo, ArrayList<Integer>>();
-		
-		// aggregate blockIds by datanode
-		for (int i = 0; i < targets.size(); ++i) {
-			if (!m.containsKey(targets.get(i))) {
-				ArrayList<Integer> tmp = new ArrayList<Integer>();
-				tmp.add(blockIds.get(i));
-				m.put(targets.get(i), tmp);
-			}
-			else {
-				m.get(targets.get(i)).add(blockIds.get(i));
-			}
-		}
-		
-		// get blocks from each datanode
-		Iterator iter = m.entrySet().iterator();
-		while (iter.hasNext()) {
-			Map.Entry entry = (Map.Entry)iter.next();
-			DatanodeInfo target = (DatanodeInfo)entry.getKey();
-			blockIds = (ArrayList<Integer>)entry.getValue();
-			
-			try (Socket socket = new Socket(target.getAddress(), target.getPort());
-				ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-				ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
+	/* Fetch block from other datanode */
+	private void fetchData(int blockId, DatanodeInfo target) {
+		try (Socket socket = new Socket(target.getAddress(), target.getPort());
+			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
 				
-				oos.writeObject(new Command(Operation.READ_DATA, blockIds));
-				ArrayList<Block> blocks = (ArrayList<Block>)ois.readObject();
+			oos.writeObject(new Command(Operation.READ_DATA, blockId, null));
+			Block block = (Block)ois.readObject();
 				
-				// write the blocks got from other datanode to local disk
-				// and update the map of block to filename
-				for (int i = 0; i < blocks.size(); ++i) {
-					String fileName = "block" + blocks.get(i).getId();
-					writeBlock(fileName, blocks.get(i).getData());
-					blockMap.put(blocks.get(i).getId(), fileName);
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			// write the block got from other datanode to local disk
+			// and update the map of block to filename
+			String fileName = dataDir + "/block" + block.getId();
+			writeBlock(fileName, block.getData());
+			blockMap.put(block.getId(), fileName);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 	
 	/* Delete blocks in this datanode */
-	private void delete_data(Command command) {
-		List<Integer> blockIds = command.getBlockIds();
-		
-		for (int i = 0; i < blockIds.size(); ++i) {
-			File f = new File(blockMap.get(blockIds.get(i)));
-			// To do: need lock
-			f.delete();
-			blockMap.remove(blockIds.get(i));
-		}
+	private void deleteData(int blockId) {
+		File f = new File(blockMap.get(blockId));
+		// To do: need lock
+		f.delete();
+		blockMap.remove(blockId);
 	}
 	
-	/* Send blocks to client or other datanodes */
-	private void transfer_data(ObjectOutputStream oos, Command command) {
-		List<Integer> blockIds = command.getBlockIds();
-		ArrayList<Block> blocks = new ArrayList<Block>();
-		
-		// read every blocks from local disk
-		for (int i = 0; i < blockIds.size(); ++i) {
-			//To do, may need lock
-			File f = new File(blockMap.get(blockIds.get(i)));
-			StringBuilder sb = new StringBuilder();
+	/* Send block to client or other datanode */
+	private void transferData(ObjectOutputStream oos, int blockId) {
+		// read block from local file
+		//To do, may need lock
+		File f = new File(blockMap.get(blockId));
+		StringBuilder sb = new StringBuilder();
 			
-			try (BufferedReader br = new BufferedReader(new FileReader(f))) {
-				String line;
-				while ((line = br.readLine()) != null) {
-					sb.append(line);
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
+		try (BufferedReader br = new BufferedReader(new FileReader(f))) {
+			String line;
+			while ((line = br.readLine()) != null) {
+				sb.append(line);
 			}
-			
-			blocks.add(new Block(blockIds.get(i), sb.toString()));
-		}
-		
-		try {
-			oos.writeObject(blocks);
+			oos.writeObject(new Block(blockId, sb.toString()));
 			oos.flush();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -237,18 +215,32 @@ public class Datanode implements Runnable {
 	}
 	
 	/* Receive block from client or other datanodes */
-	private boolean receive_data(ObjectInputStream ois) {
+	private boolean receiveData(ObjectInputStream ois) {
 		try {
 			Block block = (Block)ois.readObject();
-			String fileName = "block" + block.getId();
+			String fileName = dataDir + "/block" + block.getId();
 			writeBlock(fileName, block.getData());
 			// To do, may need lock
-			blockMap.put(block.getId(), block.getData());
+			blockMap.put(block.getId(), fileName);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
 		}
 		return true;
+	}
+	
+	/*
+	 *  Shut down datanode
+	 */
+	private void shutDown() {
+		System.out.println("Shutting down...");
+		stop = true;
+		try (ObjectOutputStream oos = new ObjectOutputStream(
+						new FileOutputStream(new File(imageFile)))) {
+			oos.writeObject(blockMap);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public void run() {
@@ -260,7 +252,7 @@ public class Datanode implements Runnable {
 			return;
 		}
 		
-		while (true) {
+		while (stop == false) {
 			try {
 				Socket clientSocket = listen.accept();
 				ObjectInputStream ois = new 
@@ -270,10 +262,10 @@ public class Datanode implements Runnable {
 				Command command = (Command)ois.readObject();
 				switch(command.operation) {
 				case READ_DATA:
-					transfer_data(oos, command);
+					transferData(oos, command.getBlockId());
 					break;
 				case WRITE_DATA:
-					if (receive_data(ois) == true)
+					if (receiveData(ois) == true)
 						oos.writeObject("succeed");
 					else 
 						oos.writeObject("fail");
@@ -287,6 +279,11 @@ public class Datanode implements Runnable {
 			}
 		}
 		
+		try {
+			listen.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public static void main(String[] args) {

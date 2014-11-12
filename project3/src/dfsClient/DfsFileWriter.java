@@ -8,10 +8,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import datanode.Block;
@@ -35,13 +32,13 @@ public class DfsFileWriter {
 	
 	/* 
 	 *  Write local file to dfs
-	 *  fileName: the name of local file
+	 *  fileName: the path of local file
 	 *  dfsPath: the path on dfs, starting with dfs://
 	 */
 	public boolean write(String fileName, String dfsPath) {
 		int splitNum = split(fileName);
 		int pos = dfsPath.indexOf("//");
-		dfsPath = "/" + dfsPath.substring(pos + 1);
+		dfsPath = "/" + dfsPath.substring(pos + 2);
 		// blockId : list of datanode to be written
 		TreeMap<Integer, List<DatanodeInfo>> blockToDn = namenode.write(dfsPath, splitNum);
 		
@@ -73,6 +70,7 @@ public class DfsFileWriter {
 					}
 				}
 			}
+			br.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
@@ -82,7 +80,7 @@ public class DfsFileWriter {
 	
 	/* Send a block to datanode */
 	private boolean sendBlock(Block block, DatanodeInfo datanode) {
-		Command command = new Command(Operation.WRITE_DATA, null);
+		Command command = new Command(Operation.WRITE_DATA, 0, null);
 		try (Socket socket = new Socket(datanode.getAddress(), datanode.getPort());
 			 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 			 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
