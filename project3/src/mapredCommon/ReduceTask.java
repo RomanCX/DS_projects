@@ -9,8 +9,12 @@ public class ReduceTask extends Task{
 	
 	public ReduceTask(int taskId, String tmpDir, Job job,
 				List<TaskTrackerInfo> taskTrackers) {
-		super(taskId, tmpDir, job);
+		super(taskId, job);
 		this.taskTrackers = taskTrackers;
 	}
 
+	@Override
+	public void run(String tmpDir) throws Exception {
+		
+	}
 }

@@ -6,9 +6,13 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
+import namenode.DatanodeInfo;
 import mapredCommon.Job;
+import mapredCommon.MapTask;
 import protocals.JobTrackerProtocol;
 import protocals.NamenodeProtocal;
 import protocals.TkRegistration;
@@ -83,14 +87,24 @@ public class JobTracker implements JobTrackerProtocol {
 	
 	@Override
 	public int submitJob(Job job) {
-		// To do, there are many things needed to do...
-		int numRunningJobs = 0;
 		synchronized(runningJobs) {
-			numRunningJobs = runningJobs.size();
-			numRunningJobs++;
-			runningJobs.put(numRunningJobs, job);
+			numJobs++;
+			job.setJobId(numJobs);
+			runningJobs.put(numJobs, job);
 		}
-		return numRunningJobs;
+		TreeMap<Integer, List<DatanodeInfo>> blockToDn =
+								namenode.getFileBlocks(job.getInputPath());
+		int mapTaskId = 0;
+		for (Map.Entry entry : blockToDn.entrySet()) {
+			int blockId = (int)entry.getKey();
+			List<DatanodeInfo> datanodes = (List<DatanodeInfo>)entry.getValue();
+			MapTask map = new MapTask(mapTaskId, blockId, job);
+			synchronized(jobToTask) {
+				if (!jobToTask.contains(job.getjobId())) {
+					List<Integer>
+				}
+			}
+		}
 	}
 	
 	@Override

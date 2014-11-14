@@ -11,14 +11,17 @@ public class MapTask extends Task{
 	// user defined mapper function
 	private Mapper mapper;
 	
-	public MapTask(int taskId, String tmpDir, int blockId, DatanodeInfo datanode,
-				Job job) {
-		super(taskId, tmpDir, job);
+	public MapTask(int taskId, int blockId, Job job) {
+		super(taskId, job);
 		this.blockId = blockId;
+	}
+	
+	public void setDatanode(DatanodeInfo datanode) {
 		this.datanode = datanode;
 	}
 	
-	public void run() throws Exception {
+	@Override
+	public void run(String tmpDir) throws Exception {
 		RecordReader reader = new RecordReader(blockId, datanode, job.getDelim());
 		RecordWriter writer = new RecordWriter(taskId, tmpDir, job.getDelim());
 		/* 
