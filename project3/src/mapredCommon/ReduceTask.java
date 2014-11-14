@@ -1,11 +1,16 @@
 package mapredCommon;
 
-public class ReduceTask extends Task{
+import java.util.List;
 
-	String outputFileName;
-	public ReduceTask(int id, String jarFileName, String outputFileName) {
-		super(id, jarFileName);
-		this.outputFileName = outputFileName;
+import jobtracker.TaskTrackerInfo;
+
+public class ReduceTask extends Task{
+	private List<TaskTrackerInfo> taskTrackers;
+	
+	public ReduceTask(int taskId, String tmpDir, Job job,
+				List<TaskTrackerInfo> taskTrackers) {
+		super(taskId, tmpDir, job);
+		this.taskTrackers = taskTrackers;
 	}
 
 }

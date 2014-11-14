@@ -3,11 +3,13 @@ package mapredCommon;
 import java.io.Serializable;
 
 public class Task implements Serializable {
-	int id;
-	String jarFileName;
+	int taskId;
+	String tmpDir;
+	Job job;
 	
-	public Task(int id, String jarFileName) {
-		this.id = id;
-		this.jarFileName = jarFileName;
+	public Task(int taskId, String tmpDir, Job job) {
+		this.taskId = taskId;
+		this.job = job;
+		this.tmpDir = tmpDir;
 	}
 }
