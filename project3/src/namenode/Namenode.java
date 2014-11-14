@@ -287,26 +287,26 @@ public class Namenode implements NamenodeProtocal, Serializable {
 		TreeMap<Integer, List<DatanodeInfo>> returnValue 
 			= new TreeMap<Integer, List<DatanodeInfo>>();
 		synchronized (datanodes) {
-		rwLock.readLock().lock();
-		List<Integer> fileBlocks = files.get(fileName);
-		if (fileBlocks == null) {
-			return null;
-		}
-		for (int blockId : fileBlocks) {
-			List<Integer> datanodeIdsContainingBlock = blocks.get(blockId);
-			List<DatanodeInfo> datanodesContainingBlock = new ArrayList<DatanodeInfo>();
-			for (int datanodeIdContainingBlock : datanodeIdsContainingBlock) {
-				DatanodeInfo datanode = datanodes.get(datanodeIdContainingBlock);
-				if (datanode.isAlive()) {
-					datanodesContainingBlock.add(datanode);
-					System.out.println("getFileBlocks: block " + blockId + " from datanode " + datanodeIdContainingBlock);
-				}
+			rwLock.readLock().lock();
+			List<Integer> fileBlocks = files.get(fileName);
+			if (fileBlocks == null) {
+				return null;
 			}
-			returnValue.put(blockId, datanodesContainingBlock);
+			for (int blockId : fileBlocks) {
+				List<Integer> datanodeIdsContainingBlock = blocks.get(blockId);
+				List<DatanodeInfo> datanodesContainingBlock = new ArrayList<DatanodeInfo>();
+				for (int datanodeIdContainingBlock : datanodeIdsContainingBlock) {
+					DatanodeInfo datanode = datanodes.get(datanodeIdContainingBlock);
+					if (datanode.isAlive()) {
+						datanodesContainingBlock.add(datanode);
+						System.out.println("getFileBlocks: block " + blockId + " from datanode " + datanodeIdContainingBlock);
+					}
+				}
+				returnValue.put(blockId, datanodesContainingBlock);
+			}
+			rwLock.readLock().unlock();
 		}
-		rwLock.readLock().unlock();
-	}
-	return returnValue;	
+		return returnValue;	
 	}
 
 }
