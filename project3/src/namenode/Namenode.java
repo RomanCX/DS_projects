@@ -171,6 +171,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 		}
 		return returnValue;
 	}
+	
 
 	private DatanodeInfo selectDatanode(String address, List<Integer> datanodesContainingBlock) {
 		DatanodeInfo selectedDatanode= null;
@@ -277,6 +278,35 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			returnValue.add(pair.getKey());
 		}
 		return returnValue;
+	}
+
+
+	@Override
+	public TreeMap<Integer, List<DatanodeInfo>> getFileBLocks(String fileName)
+			throws RemoteException {
+		TreeMap<Integer, List<DatanodeInfo>> returnValue 
+			= new TreeMap<Integer, List<DatanodeInfo>>();
+		synchronized (datanodes) {
+			rwLock.readLock().lock();
+			List<Integer> fileBlocks = files.get(fileName);
+			if (fileBlocks == null) {
+				return null;
+			}
+			for (int blockId : fileBlocks) {
+				List<Integer> datanodeIdsContainingBlock = blocks.get(blockId);
+				List<DatanodeInfo> datanodesContainingBlock = new ArrayList<DatanodeInfo>();
+				for (int datanodeIdContainingBlock : datanodeIdsContainingBlock) {
+					DatanodeInfo datanode = datanodes.get(datanodeIdContainingBlock);
+					if (datanode.isAlive()) {
+						datanodesContainingBlock.add(datanode);
+						System.out.println("getFileBlocks: block " + blockId + " from datanode " + datanodeIdContainingBlock);
+					}
+				}
+				returnValue.put(blockId, datanodesContainingBlock);
+			}
+			rwLock.readLock().unlock();
+		}
+		return returnValue;	
 	}
 
 }

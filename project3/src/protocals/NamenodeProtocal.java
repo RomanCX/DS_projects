@@ -29,4 +29,6 @@ public interface NamenodeProtocal extends Remote {
 	public void delete(String fileName) throws RemoteException;
 	
 	public List<String> ls() throws RemoteException;
+	
+	public TreeMap<Integer, List<DatanodeInfo>> getFileBLocks(String fileName) throws RemoteException;
 }

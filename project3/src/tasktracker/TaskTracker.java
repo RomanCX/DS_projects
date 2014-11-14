@@ -112,7 +112,7 @@ public class TaskTracker {
 							jobTracker.heartBeat(finishedTasks, numSlots, id);
 					parseHeartBeatResponse(heartBeatResponse);
 				} catch (RemoteException e) {
-					// TODO Auto-generated catch block
+					System.err.println("Failed to connect to Job Tracker");
 					e.printStackTrace();
 				}
 				
@@ -128,7 +128,7 @@ public class TaskTracker {
 	}
 	
 	private void parseHeartBeatResponse(HeartBeatResponse heartBeatResponse) {
-		//TODO: not implemented
+		//TODO: not implementedf
 	}
 	
 	public static void main(String[] args) {
