@@ -21,6 +21,8 @@ public class MapTask extends Task{
 	public void run() throws Exception {
 		RecordReader reader = new RecordReader(blockId, datanode, job.getDelim());
 		RecordWriter writer = new RecordWriter(taskId, tmpDir, job.getDelim());
+		String jarFileName = job.getJarFile();
+		
 		/* 
 		 * To do: get a mapper
 		 */
