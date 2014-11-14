@@ -12,4 +12,11 @@ public class TaskTrackerInfo {
 		this.status = TaskTrackerStatus.ALIVE;
 	}
 	
+	public String getAddress() {
+		return address;
+	}
+	
+	public void setTime(long time) {
+		this.lastHeartBeatTime = time;
+	}
 }
