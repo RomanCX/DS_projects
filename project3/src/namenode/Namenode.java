@@ -282,7 +282,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 
 
 	@Override
-	public TreeMap<Integer, List<DatanodeInfo>> getFileBLocks(String fileName)
+	public TreeMap<Integer, List<DatanodeInfo>> getFileBlocks(String fileName)
 			throws RemoteException {
 		TreeMap<Integer, List<DatanodeInfo>> returnValue 
 			= new TreeMap<Integer, List<DatanodeInfo>>();

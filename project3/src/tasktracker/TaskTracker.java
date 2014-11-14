@@ -13,10 +13,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.jar.JarFile;
 
 import protocals.HeartBeatResponse;
 import protocals.JobTrackerProtocol;
 import protocals.TkRegistration;
+import mapredCommon.MapTask;
 import mapredCommon.Task;
 
 public class TaskTracker {
@@ -128,7 +130,15 @@ public class TaskTracker {
 	}
 	
 	private void parseHeartBeatResponse(HeartBeatResponse heartBeatResponse) {
-		//TODO: not implementedf
+		List<Task> newTasks = heartBeatResponse.getTasks();
+		for (Task newTask : newTasks) {
+			try {
+				newTask.run(mapOutputDir);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	public static void main(String[] args) {

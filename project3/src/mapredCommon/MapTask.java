@@ -1,6 +1,15 @@
 package mapredCommon;
 
 
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+
 import namenode.DatanodeInfo;
 
 public class MapTask extends Task{
@@ -24,8 +33,9 @@ public class MapTask extends Task{
 	public void run(String tmpDir) throws Exception {
 		RecordReader reader = new RecordReader(blockId, datanode, job.getDelim());
 		RecordWriter writer = new RecordWriter(taskId, tmpDir, job.getDelim());
-		String jarFileName = job.getJarFile();
-		
+		String jarFilePath = job.getJarFile();
+		mapper = MapReduceUtils.getMapper(jarFilePath);
+
 		/* 
 		 * To do: get a mapper
 		 */
@@ -33,4 +43,7 @@ public class MapTask extends Task{
 			mapper.map(reader.nextKey(), reader.nextValue(), writer);
 		}
 	}
+	
+
+	
 }
