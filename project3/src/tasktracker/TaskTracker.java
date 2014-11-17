@@ -38,7 +38,7 @@ public class TaskTracker {
 	
 	static TaskTracker taskTracker= null;
 	
-	static final String CONFIG_FILE_NAME = "tasktracker.cnf";
+	static final String CONFIG_FILE_NAME = "mapred.cnf";
 	static final String DEFAULT_MAP_OUTPUT_DIR = "mapOutput";
 	static final String JOB_TRACKER_NAME = "jobtracker";
 	
@@ -89,17 +89,17 @@ public class TaskTracker {
 		try {
 			pro.load(new FileReader(CONFIG_FILE_NAME));
 			// assume the format of master.default.name is hostname:port
-			String name = pro.getProperty("master.default.name");
-			int posColon = name.indexOf(":");
-			jobTrackerAddress = name.substring(0, posColon);
-			jobTrackerPort = Integer.parseInt(name.substring(posColon + 1));
+			String fsName = pro.getProperty("fs.default.name");
+			int posColon = fsName.indexOf(":");
+			jobTrackerAddress = fsName.substring(0, posColon);
+			jobTrackerPort = Integer.parseInt(pro.getProperty("jobtracker.port"));
 			
 			// format name and datadir
 			String tmpDir = pro.getProperty("mr.mapoutput.dir", DEFAULT_MAP_OUTPUT_DIR);
 			setMapOutputDir(tmpDir);
 			
 			
-			System.out.println("Master address: " + name);
+			System.out.println("Master address: " + fsName + ":" + jobTrackerPort);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
