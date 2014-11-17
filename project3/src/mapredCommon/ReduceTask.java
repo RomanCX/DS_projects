@@ -73,6 +73,11 @@ public class ReduceTask extends Task {
 			BufferedReader reader = new BufferedReader(new FileReader(sortedFile));
 			String line = reader.readLine();
 			int pos = line.indexOf(job.getDelim());
+			
+			/*
+			 * The following loop does the trick to collect 
+			 * all values with the same key
+			 */
 			String currKey = line.substring(0, pos);
 			List<String> values = new ArrayList<String>();
 			String value = line.substring(pos + 1);
@@ -119,23 +124,27 @@ public class ReduceTask extends Task {
 				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 				
+				//Send the requesting map output path
 				outStream.writeObject(outputPath);
 				
+				//Receive the file count
 				Integer fileCount = inStream.readInt();
 				
 				for (int j = 0; i < fileCount; i++) {
+					//Receive the file length
 					Long fileSize = inStream.readLong();
+					
+					//Create the file and put to outputPath list
 					File tmpFile = new File(outputPath.getReduceTmpPath(tmpDir, i, j));
 					if (tmpFile.exists()) {
 						tmpFile.delete();
 					}
 					mapOutFiles.add(tmpFile);
+					
+					//Read the file from socket and write to local disk
 					FileOutputStream fileOutput = new FileOutputStream(tmpFile, true);
 					byte[] buffer = new byte[FILE_BUFFER_SIZE];
 					int bytesRead = 0;
-					if (tmpFile.exists()) {
-						tmpFile.delete();
-					}
 					while (fileSize != 0) {
 						bytesRead = inStream.read(buffer, 0, buffer.length);
 						fileOutput.write(buffer, 0, bytesRead);
@@ -157,9 +166,14 @@ public class ReduceTask extends Task {
 		}
 	}
 	
+	/*
+	 * This function performs an external merge sort. Given a list of sorted files,
+	 * it put the the first key-value pair into a heap(priority queue). Then in every
+	 * iteration, it gets the smallest key-value pair from the heap, write it to output
+	 * file, delete that pair from heap and read a new key-value pair from the file the
+	 * just-deleted pair belonged.
+	 */
 	private void sortFiles() throws IOException {
-		
-		
 		List<BufferedReader> readers = new ArrayList<BufferedReader>();
 		for (int i = 0; i < mapOutFiles.size(); i++) {
 			readers.add(new BufferedReader(new FileReader(mapOutFiles.get(i))));
@@ -174,9 +188,12 @@ public class ReduceTask extends Task {
 			readLinePutHeap(heap, readers, index);
 		}
 			
-			
 	}
 	
+	/*
+	 * Read a line from reader(i). This is the file that has the smallest record and 
+	 * just pulled from heap into output file
+	 */
 	private void readLinePutHeap(TreeMap<String, ValueEntry> heap, List<BufferedReader> readers, int index) {
 		try {
 			BufferedReader reader = readers.get(index);
@@ -197,6 +214,9 @@ public class ReduceTask extends Task {
 		
 	}
 	
+	/*
+	 * Write a key-value pair to  the file specified by writer
+	 */
 	private int writeValueEntry(TreeMap<String, ValueEntry> heap, BufferedWriter writer) {
 		Entry<String, ValueEntry> entry = heap.pollFirstEntry();
 		String key = entry.getKey();
@@ -212,6 +232,9 @@ public class ReduceTask extends Task {
 		return valueEntry.index;
 	}
 		
+	/*
+	 * Upload the local reduce output file to HDFS
+	 */
 	private void uploadOutput() throws Exception  {
 		String jobTrackerAddress = TaskTracker.getInstance().getJobTrackerAddress();
 		int jobTrackerPort = TaskTracker.getInstance().getJobTrackerPort();

@@ -27,5 +27,13 @@ public class OutputPath {
 	public String getReducePath(String outputDir) {
 		return outputDir + "/reduce" + job.getJobId() + "_" + taskId;
 	}
+	
+	public Job getJob() {
+		return job;
+	}
+	
+	public int getReduceId() {
+		return reduceId;
+	}
 }
 

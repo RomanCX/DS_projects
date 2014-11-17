@@ -43,26 +43,36 @@ public class TaskTrackerListener implements Runnable{
 				ObjectInputStream inStream = new ObjectInputStream(connectionSocket.getInputStream());
 				ObjectOutputStream outStream = new ObjectOutputStream(connectionSocket.getOutputStream());
 				
+				//Receive the object describing the map output path
 				OutputPath mapOutputPath = (OutputPath)inStream.readObject();
 				
 				File folder = new File(TaskTracker.getInstance().getMapOutputDir());
 				File[] filesArray = folder.listFiles();
 				List<File> listOfFiles = new ArrayList<File>();
+				String prefix = "map" + mapOutputPath.getJob().getJobId();
+				String suffix = Integer.toString(mapOutputPath.getReduceId());
 				for (File file : filesArray) {
-					if (file.getName())
+					String fileName = file.getName();
+					if (fileName.startsWith(prefix) && fileName.endsWith(suffix)) {
+						listOfFiles.add(file);
+					}
 				}
-				Integer fileCount = listOfFiles.length;
+				Integer fileCount = listOfFiles.size();
+				
+				//Send the file count
 				outStream.writeObject(fileCount);
 				
 				
-				for (int i = 0; i < listOfFiles.length; i++) {
-					File file = listOfFiles[i];
+				for (int i = 0; i < listOfFiles.size(); i++) {
+					//Send the file size
+					File file = listOfFiles.get(i);
 					Long fileSize = file.length();
 					outStream.writeObject(fileSize);
 					
 					byte[] buffer = new byte[FILE_BUFFER_SIZE];
 					BufferedInputStream fileInput = new BufferedInputStream(new FileInputStream(file));
 					
+					//Read and send the file
 					int bytesRead = 0;
 					while ((bytesRead = fileInput.read(buffer, 0, buffer.length)) != -1) {
 						outStream.write(buffer, 0, bytesRead);
