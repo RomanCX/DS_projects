@@ -19,13 +19,14 @@ public class MapReduceUtils {
 		return cl;
 	}
 	
-	public static Mapper getMapper(String jarFilePath) throws IOException, 
+	@SuppressWarnings("unchecked")
+	public static Object getClassObject(String jarFilePath, Class superClass) throws IOException, 
 		ClassNotFoundException, InstantiationException, IllegalAccessException {
 		ClassLoader cl = getClassLoader(jarFilePath);
 		JarFile jarFile = new JarFile(jarFilePath);
 		Enumeration<JarEntry> entries = jarFile.entries();
 		
-		Mapper mapper = null;
+		Object returnValue = null;
 		while (entries.hasMoreElements()) {
 			JarEntry entry = entries.nextElement();
 			String classFileName = entry.getName();
@@ -34,11 +35,22 @@ public class MapReduceUtils {
 				continue;
 			}
 			String className = classFileName.substring(0, pos).replace('/', '.');
-			Class clazz = cl.loadClass(className);
-			if (Mapper.class.isAssignableFrom(clazz)) {
-				mapper = (Mapper) clazz.newInstance();
+			Class<?> clazz = cl.loadClass(className);
+			if (superClass.isAssignableFrom(clazz)) {
+				returnValue = clazz.newInstance();
 			}
 		}
-		return mapper;
+		return returnValue;
 	}
+	
+	public static Mapper getMapper(String jarFilePath) throws IOException, 
+		ClassNotFoundException, InstantiationException, IllegalAccessException {
+		return (Mapper) getClassObject(jarFilePath, Mapper.class);
+	}
+	
+	public static Reducer getReducer(String jarFilePath) throws IOException, 
+	ClassNotFoundException, InstantiationException, IllegalAccessException {
+		return (Reducer) getClassObject(jarFilePath, Reducer.class);
+	}
+	
 }

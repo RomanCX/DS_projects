@@ -59,4 +59,8 @@ public class Job implements Serializable {
 	public void setJobId(int jobId) {
 		this.jobId = jobId;
 	}
+	
+	public void setNumReduceTasks(int numReduceTasks) {
+		this.numReduceTasks = numReduceTasks;
+	}
 }

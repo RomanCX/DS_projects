@@ -1,15 +1,7 @@
 package mapredCommon;
 
-public class RecordWriter {
-	private int taskId;
-	private String outputDir;
-	private String delim;
-	
-	public RecordWriter(int taskId, String outputDir, String delim) {
-		
-	}
-	
-	public void write(String key, String value) {
-		
-	}
+import java.io.IOException;
+
+public interface RecordWriter {
+	public void write(String key, String value)throws IOException;
 }

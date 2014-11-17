@@ -154,25 +154,31 @@ public class JobTracker implements JobTrackerProtocol {
 		taskIdToDns.clear();
 		trackerIdToCompletedTaskIds.clear();
 		currentJob = null;
-		if (jobQueue.isEmpty() == false) {
+		while (jobQueue.isEmpty() == false) {
 			currentJob = jobQueue.poll();
-			prepareJob();
+			try {
+				prepareJob();
+				break;
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
 	/* Generate tasks for current job */
-	private void prepareJob() {
+	private void prepareJob() throws RemoteException {
 		// get the number of blocks in input file
 		TreeMap<Integer, List<DatanodeInfo>> blockToDn =
-							namenode.getFileBLocks(currentJob.getInputPath());
+							namenode.getFileBlocks(currentJob.getInputPath());
 		mapTasksLeft = blockToDn.size();
-		for (Map.Entry entry : blockToDn.entrySet()) {
+		for (Map.Entry<Integer, List<DatanodeInfo>> entry : blockToDn.entrySet()) {
 			int blockId = (int)entry.getKey();
+			@SuppressWarnings("unchecked")
 			List<DatanodeInfo> datanodes = (List<DatanodeInfo>)entry.getValue();
 			// for every block, generate a map task
 			MapTask map = new MapTask(nextMapTaskId, blockId, currentJob);
 			mapTasks.add(map);
-			List<String> belonging;
+			List<String> belonging = new ArrayList<String>();
 			// add this map task to each node which has input file in local
 			for (DatanodeInfo datanode : datanodes) {
 				String address = datanode.getAddress();
@@ -194,15 +200,16 @@ public class JobTracker implements JobTrackerProtocol {
 		reduceTasksLeft = currentJob.getNumReduceTasks();
 		if (currentJob.getNumReduceTasks() == 0) {
 			reduceTasksLeft = maxReduceTasks * trackerIdToTracker.size();
-			//To do, job needs a method to set number of reduce tasks
 			currentJob.setNumReduceTasks(reduceTasksLeft);
 		}
 	}
 	
 	private void generateReduceTasks() {
 		for (int i = 0; i < currentJob.getNumReduceTasks(); ++i) {
-			//To do, reduceTask needs a new constructor
-			//and a method to reset taskTrackers in the event of tasktracker failure 
+			/*
+			 * When taskTracker changes in case of failure, the actual object
+			 * chages automatically. So no need to change the reference
+			 */
 			reduceTasks.add(new ReduceTask(i, currentJob, taskTrackers));
 		}
 	}
@@ -233,7 +240,6 @@ public class JobTracker implements JobTrackerProtocol {
 		}
 		// remove the id of selected map task from dnToTaskIds 
 		if (mapTask != null) {
-			// To do task needs a method to get task id
 			int taskId = mapTask.getTaskId();
 			List<String> datanodes = taskIdToDns.get(mapTask.getTaskId());
 			for (String d : datanodes) {
@@ -265,11 +271,9 @@ public class JobTracker implements JobTrackerProtocol {
 		return job.getJobId();
 	}
 	
-	
 	@Override
 	public HeartBeatResponse heartBeat(List<Integer> finishedTasks, 
-									List<Integer> failedTasks,
-									int numSlots, int taskTrackerId) {
+		List<Integer> failedTasks, int numSlots, int taskTrackerId) throws RemoteException {
 		/* deal with finished tasks
 		 * based on finished tasks, update some data structures
 		 * if all the map tasks are done, then generate reducer tasks
@@ -351,5 +355,11 @@ public class JobTracker implements JobTrackerProtocol {
 				(JobTrackerProtocol)UnicastRemoteObject.exportObject(jobTracker, 0);
 		Registry registry = LocateRegistry.createRegistry(jobTracker.getPort());
 		registry.rebind(JOBTRACKER_RMI_NAME, jobTrackerStub);
+	}
+
+	@Override
+	public JobProgress checkProgress(int jobId) throws RemoteException {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

@@ -25,34 +25,38 @@ public class TaskTracker {
 	int maxAllowedTasks;
 	long lastHeartBeatTime;
 	HashMap<Integer, Task> runningTasks;
+	List<Integer> failedTasks;
 	List<Integer> finishedTasks;
 	Registry registry;
 	String jobTrackerAddress;
 	int jobTrackerPort;
 	JobTrackerProtocol jobTracker;
 	String mapOutputDir;
-	String myAddress;
-	int myPort;
+	ServerSocket listenerSocket;
 	int id;
 	int heartBeatInterval;
+	
+	static TaskTracker taskTracker= null;
 	
 	static final String CONFIG_FILE_NAME = "tasktracker.cnf";
 	static final String DEFAULT_MAP_OUTPUT_DIR = "mapOutput";
 	static final String JOB_TRACKER_NAME = "jobtracker";
 	
-	public TaskTracker() {
+	//Marked private to enforce singleton
+	private TaskTracker() {
 		int numProcessors = Runtime.getRuntime().availableProcessors();
 		this.runningTasks = new HashMap<Integer, Task>();
 		this.finishedTasks = new ArrayList<Integer>();
+		this.failedTasks = new ArrayList<Integer>();
 		lastHeartBeatTime = 0;
 		loadConfiguration();
 		
 		try {
 			registry = LocateRegistry.getRegistry(jobTrackerAddress, jobTrackerPort);
 			jobTracker = (JobTrackerProtocol) registry.lookup(JOB_TRACKER_NAME);
-			myAddress = Inet4Address.getLocalHost().getHostName();
-			myPort = getFreePort();
-			TkRegistration tkRegistration = jobTracker.register(myAddress, myPort);
+			listenerSocket = new ServerSocket(0);
+			TkRegistration tkRegistration = jobTracker.register(listenerSocket.getInetAddress().toString(), listenerSocket.getLocalPort());
+			mapOutputDir = tkRegistration.getTmpDir();
 			heartBeatInterval = tkRegistration.getInterval();
 			maxAllowedTasks = tkRegistration.getMaxAllowedTasks();
 			if (numProcessors < maxAllowedTasks) {
@@ -72,13 +76,14 @@ public class TaskTracker {
 		
 	}
 	
-	
-	public static int getFreePort() throws IOException {
-		ServerSocket tmp = new ServerSocket(0);
-		int myPort = tmp.getLocalPort();
-		tmp.close();
-		return myPort;
+	public static TaskTracker getInstance() {
+		if (taskTracker == null) {
+			taskTracker = new TaskTracker();
+		}
+		return taskTracker;
 	}
+	
+	
 	private void loadConfiguration() {
 		Properties pro = new Properties();
 		try {
@@ -90,7 +95,9 @@ public class TaskTracker {
 			jobTrackerPort = Integer.parseInt(name.substring(posColon + 1));
 			
 			// format name and datadir
-			mapOutputDir = pro.getProperty("mr.mapoutput.dir", DEFAULT_MAP_OUTPUT_DIR);
+			String tmpDir = pro.getProperty("mr.mapoutput.dir", DEFAULT_MAP_OUTPUT_DIR);
+			setMapOutputDir(tmpDir);
+			
 			
 			System.out.println("Master address: " + name);
 		} catch(Exception e) {
@@ -111,7 +118,7 @@ public class TaskTracker {
 				try {
 					lastHeartBeatTime = currTime;
 					HeartBeatResponse heartBeatResponse =
-							jobTracker.heartBeat(finishedTasks, numSlots, id);
+							jobTracker.heartBeat(finishedTasks, failedTasks, numSlots, id);
 					parseHeartBeatResponse(heartBeatResponse);
 				} catch (RemoteException e) {
 					System.err.println("Failed to connect to Job Tracker");
@@ -133,7 +140,8 @@ public class TaskTracker {
 		List<Task> newTasks = heartBeatResponse.getTasks();
 		for (Task newTask : newTasks) {
 			try {
-				newTask.run(mapOutputDir);
+				newTask.setTmpDir(mapOutputDir);
+				newTask.run();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -141,9 +149,39 @@ public class TaskTracker {
 		}
 	}
 	
-	public static void main(String[] args) {
-		TaskTracker taskTracker = new TaskTracker();
-		taskTracker.run();
+	public void reportFinished(int taskId) {
+		runningTasks.remove(taskId);
+		finishedTasks.add(taskId);
 	}
+	
+	public void reportFailed(int taskId) {
+		failedTasks.add(taskId);
+		runningTasks.remove(taskId);
+	}
+	
+	public static void main(String[] args) {
+		TaskTracker myTaskTracker = TaskTracker.getInstance();
+		myTaskTracker.run();
+	}
+	
+	public String getMapOutputDir() {
+		return mapOutputDir;
+	}
+
+	public String getJobTrackerAddress() {
+		return jobTrackerAddress;
+	}
+	
+	public int getJobTrackerPort() {
+		return jobTrackerPort;
+	}
+	
+	private void setMapOutputDir(String tmpDir) {
+		if (tmpDir.endsWith("/")) {
+			mapOutputDir = tmpDir.substring(0, tmpDir.length() - 1);
+		}
+		
+	}
+	
 	
 }

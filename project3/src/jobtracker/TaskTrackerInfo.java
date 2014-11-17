@@ -16,7 +16,8 @@ public class TaskTrackerInfo {
 		return address;
 	}
 	
-	public void setTime(long time) {
-		this.lastHeartBeatTime = time;
+	public int getPort() {
+		return port;
 	}
+	
 }
