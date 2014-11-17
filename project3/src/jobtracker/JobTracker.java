@@ -72,15 +72,15 @@ public class JobTracker implements JobTrackerProtocol {
 	// reduce tasks to be ran
 	List<Integer> reduceTasksToBeRan;
 	// address -> list of taskId
-	TreeMap<String, Set<Integer>> dnToTaskIds;
+	TreeMap<String, Set<Integer>> dnToMapTaskIds;
 	// taskId -> list of address
-	HashMap<Integer, List<String>> taskIdToDns;
+	HashMap<Integer, List<String>> mapTaskIdToDns;
 	// address of data node -> port of data node
 	HashMap<String, Integer> addressToPort;
 	// task tracker -> list of id of running tasks
 	HashMap<Integer, Set<Integer>> trackerIdToRunningTaskIds;
 	// task tracker -> list of id of completed tasks
-	HashMap<Integer, Set<Integer>> trackerIdToCompletedTaskIds;
+	HashMap<Integer, Set<Integer>> trackerIdToCompletedMapTaskIds;
 	
 	public JobTracker() {
 		nextJobId = 1;
@@ -92,11 +92,11 @@ public class JobTracker implements JobTrackerProtocol {
 		mapTasks = new ArrayList<MapTask>();
 		reduceTasks = new ArrayList<ReduceTask>();
 		reduceTasksToBeRan = new ArrayList<Integer>();
-		dnToTaskIds = new TreeMap<String, Set<Integer>>();
-		taskIdToDns = new HashMap<Integer, List<String>>();
+		dnToMapTaskIds = new TreeMap<String, Set<Integer>>();
+		mapTaskIdToDns = new HashMap<Integer, List<String>>();
 		addressToPort = new HashMap<String, Integer>();
 		trackerIdToRunningTaskIds = new HashMap<Integer, Set<Integer>>();
-		trackerIdToCompletedTaskIds = new HashMap<Integer, Set<Integer>>();
+		trackerIdToCompletedMapTaskIds = new HashMap<Integer, Set<Integer>>();
 	}
 	
 	public void loadConfiguration() throws Exception {
@@ -127,15 +127,13 @@ public class JobTracker implements JobTrackerProtocol {
 	
 	/* Register a task tracer */
 	@Override
-	public TkRegistration register(String address, int port) {
+	public synchronized TkRegistration register(String address, int port) {
 		TaskTrackerInfo newTaskTracker = new TaskTrackerInfo(address, port);
 		int id = 0;
-		synchronized(taskTrackers) {
-			id = nextTaskTrackerId;
-			nextTaskTrackerId++;
-			taskTrackers.add(newTaskTracker);
-			trackerIdToTracker.put(id, newTaskTracker);
-		}
+		id = nextTaskTrackerId;
+		nextTaskTrackerId++;
+		taskTrackers.add(newTaskTracker);
+		trackerIdToTracker.put(id, newTaskTracker);
 		return new TkRegistration(maxMapTasks + maxReduceTasks, id,
 								heartBeatInterval, tmpDir);
 	}
@@ -151,8 +149,8 @@ public class JobTracker implements JobTrackerProtocol {
 		nextMapTaskId = 0;
 		mapTasks.clear();
 		reduceTasks.clear();
-		taskIdToDns.clear();
-		trackerIdToCompletedTaskIds.clear();
+		mapTaskIdToDns.clear();
+		trackerIdToCompletedMapTaskIds.clear();
 		currentJob = null;
 		while (jobQueue.isEmpty() == false) {
 			currentJob = jobQueue.poll();
@@ -184,15 +182,15 @@ public class JobTracker implements JobTrackerProtocol {
 				String address = datanode.getAddress();
 				int port = datanode.getPort();
 				belonging.add(address);
-				if (dnToTaskIds.containsKey(datanode) == false) {
-					dnToTaskIds.put(address, new HashSet<Integer>());
+				if (dnToMapTaskIds.containsKey(datanode) == false) {
+					dnToMapTaskIds.put(address, new HashSet<Integer>());
 					addressToPort.put(address, datanode.getPort());
 				}
-				Set<Integer> taskIds = dnToTaskIds.get(datanode);
+				Set<Integer> taskIds = dnToMapTaskIds.get(datanode);
 				taskIds.add(nextMapTaskId);
 			}
 			// for every map, also record which datanodes it can fetch its input 
-			taskIdToDns.put(nextMapTaskId, belonging);
+			mapTaskIdToDns.put(nextMapTaskId, belonging);
 			nextMapTaskId++;
 		}
 		
@@ -217,7 +215,7 @@ public class JobTracker implements JobTrackerProtocol {
 	/* Select an appropriate map task for this taskTracker */
 	private Task selectMapTask(int taskTrackerId) {
 		String address = trackerIdToTracker.get(taskTrackerId).getAddress();
-		Set<Integer> taskIds = dnToTaskIds.get(address);
+		Set<Integer> taskIds = dnToMapTaskIds.get(address);
 		Task mapTask = null;
 		
 		// find a map task whose input file is in this task tracker
@@ -228,7 +226,7 @@ public class JobTracker implements JobTrackerProtocol {
 		}
 		// else just find an available map task
 		else {
-			for (Map.Entry entry: dnToTaskIds.entrySet()) {
+			for (Map.Entry entry: dnToMapTaskIds.entrySet()) {
 				taskIds = (Set<Integer>)entry.getValue();
 				if (taskIds.size() > 0) {
 					Iterator<Integer> iter = taskIds.iterator();
@@ -241,9 +239,9 @@ public class JobTracker implements JobTrackerProtocol {
 		// remove the id of selected map task from dnToTaskIds 
 		if (mapTask != null) {
 			int taskId = mapTask.getTaskId();
-			List<String> datanodes = taskIdToDns.get(mapTask.getTaskId());
+			List<String> datanodes = mapTaskIdToDns.get(mapTask.getTaskId());
 			for (String d : datanodes) {
-				dnToTaskIds.get(d).remove(taskId);
+				dnToMapTaskIds.get(d).remove(taskId);
 			}
 		}
 		return mapTask;
@@ -267,12 +265,14 @@ public class JobTracker implements JobTrackerProtocol {
 		job.setJobId(nextJobId);
 		jobQueue.add(job);
 		nextJobId++;
-			
+		if (currentJob == null) {
+			retireJob();
+		}
 		return job.getJobId();
 	}
 	
 	@Override
-	public HeartBeatResponse heartBeat(List<Integer> finishedTasks, 
+	public synchronized HeartBeatResponse heartBeat(List<Integer> finishedTasks, 
 		List<Integer> failedTasks, int numSlots, int taskTrackerId) throws RemoteException {
 		/* deal with finished tasks
 		 * based on finished tasks, update some data structures
@@ -282,7 +282,7 @@ public class JobTracker implements JobTrackerProtocol {
 		 * 
 		 */
 		Set<Integer> runningTaskIds = trackerIdToRunningTaskIds.get(taskTrackerId);
-		Set<Integer> completedTaskIds = trackerIdToCompletedTaskIds.get(taskTrackerId);
+		Set<Integer> completedTaskIds = trackerIdToCompletedMapTaskIds.get(taskTrackerId);
 		for (int taskId : finishedTasks) {
 			runningTaskIds.remove(taskId);
 			// then the finished task must be map task
@@ -312,8 +312,8 @@ public class JobTracker implements JobTrackerProtocol {
 			// then the failed task must be map task
 			if (mapTasksLeft > 0) {
 				mapTasksLeft++;
-				for (String dn : taskIdToDns.get(taskId)) {
-					dnToTaskIds.get(dn).add(taskId);
+				for (String dn : mapTaskIdToDns.get(taskId)) {
+					dnToMapTaskIds.get(dn).add(taskId);
 				}
 				// To do add blacklist
 			}
@@ -347,6 +347,11 @@ public class JobTracker implements JobTrackerProtocol {
 		return new HeartBeatResponse(tasksToBeAssigned);
 	}
 	
+	@Override
+	public synchronized JobProgress checkProgress(int jobId) throws RemoteException {
+		return new JobProgress(mapTasks.size(), currentJob.getNumReduceTasks(),
+							mapTasksLeft, reduceTasksLeft);
+	}
 	
 	public static void main(String[] args) throws Exception {
 		JobTracker jobTracker = new JobTracker();
@@ -355,11 +360,5 @@ public class JobTracker implements JobTrackerProtocol {
 				(JobTrackerProtocol)UnicastRemoteObject.exportObject(jobTracker, 0);
 		Registry registry = LocateRegistry.createRegistry(jobTracker.getPort());
 		registry.rebind(JOBTRACKER_RMI_NAME, jobTrackerStub);
-	}
-
-	@Override
-	public JobProgress checkProgress(int jobId) throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	}	
 }
