@@ -146,9 +146,15 @@ public class ReduceTask extends Task {
 					byte[] buffer = new byte[FILE_BUFFER_SIZE];
 					int bytesRead = 0;
 					while (fileSize != 0) {
-						bytesRead = inStream.read(buffer, 0, buffer.length);
-						fileOutput.write(buffer, 0, bytesRead);
-						fileSize -= bytesRead;
+						if (fileSize >= buffer.length) {
+							bytesRead = inStream.read(buffer, 0, buffer.length);
+							fileOutput.write(buffer, 0, bytesRead);
+							fileSize -= bytesRead;
+						} else {
+							bytesRead = inStream.read(buffer, 0, fileSize.intValue());
+							fileOutput.write(buffer, 0, bytesRead);
+							fileSize -= bytesRead;
+						}
 					}
 					fileOutput.close();
 					
