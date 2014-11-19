@@ -1,6 +1,8 @@
 package mapredCommon;
 
-public class OutputPath {
+import java.io.Serializable;
+
+public class OutputPath implements Serializable {
 	Job job;
 	int taskId;
 	int reduceId;

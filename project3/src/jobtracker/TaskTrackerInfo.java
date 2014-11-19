@@ -1,6 +1,8 @@
 package jobtracker;
 
-public class TaskTrackerInfo {
+import java.io.Serializable;
+
+public class TaskTrackerInfo implements Serializable{
 	private String address;
 	private int port;
 	private long lastHeartBeatTime;

@@ -3,6 +3,7 @@ package tasktracker;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
 import java.rmi.NotBoundException;
@@ -38,7 +39,7 @@ public class TaskTracker {
 	
 	static TaskTracker taskTracker= null;
 	
-	static final String CONFIG_FILE_NAME = "mapred.cnf";
+	static final String CONFIG_FILE_NAME = "../conf/mapred.cnf";
 	static final String DEFAULT_MAP_OUTPUT_DIR = "mapOutput";
 	static final String JOB_TRACKER_NAME = "jobtracker";
 	
@@ -55,7 +56,7 @@ public class TaskTracker {
 			registry = LocateRegistry.getRegistry(jobTrackerAddress, jobTrackerPort);
 			jobTracker = (JobTrackerProtocol) registry.lookup(JOB_TRACKER_NAME);
 			listenerSocket = new ServerSocket(0);
-			TkRegistration tkRegistration = jobTracker.register(listenerSocket.getInetAddress().toString(), listenerSocket.getLocalPort());
+			TkRegistration tkRegistration = jobTracker.register(InetAddress.getLocalHost().getHostAddress(), listenerSocket.getLocalPort());
 			mapOutputDir = tkRegistration.getTmpDir();
 			heartBeatInterval = tkRegistration.getInterval();
 			maxAllowedTasks = tkRegistration.getMaxAllowedTasks();
@@ -63,6 +64,8 @@ public class TaskTracker {
 				maxAllowedTasks = numProcessors;
 			}
 			id = tkRegistration.getTaskTrackerId();
+			TaskTrackerListener listener = new TaskTrackerListener(listenerSocket);
+			new Thread(listener).start();
 		} catch (RemoteException | NotBoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -94,11 +97,6 @@ public class TaskTracker {
 			jobTrackerAddress = fsName.substring(0, posColon);
 			jobTrackerPort = Integer.parseInt(pro.getProperty("jobtracker.port"));
 			
-			// format name and datadir
-			String tmpDir = pro.getProperty("mr.mapoutput.dir", DEFAULT_MAP_OUTPUT_DIR);
-			setMapOutputDir(tmpDir);
-			
-			
 			System.out.println("Master address: " + fsName + ":" + jobTrackerPort);
 		} catch(Exception e) {
 			e.printStackTrace();
@@ -116,10 +114,15 @@ public class TaskTracker {
 					numSlots = maxAllowedTasks - runningTasks.size();
 				}
 				try {
-					lastHeartBeatTime = currTime;
-					HeartBeatResponse heartBeatResponse =
-							jobTracker.heartBeat(finishedTasks, failedTasks, numSlots, id);
-					parseHeartBeatResponse(heartBeatResponse);
+					synchronized (finishedTasks) {
+						synchronized (failedTasks) {
+							lastHeartBeatTime = currTime;
+							HeartBeatResponse heartBeatResponse =
+									jobTracker.heartBeat(finishedTasks, failedTasks, numSlots, id);
+							finishedTasks.clear();
+							parseHeartBeatResponse(heartBeatResponse);
+						}
+					}
 				} catch (RemoteException e) {
 					System.err.println("Failed to connect to Job Tracker");
 					e.printStackTrace();
@@ -141,7 +144,7 @@ public class TaskTracker {
 		for (Task newTask : newTasks) {
 			try {
 				newTask.setTmpDir(mapOutputDir);
-				newTask.run();
+				new Thread(newTask).start();
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -150,13 +153,18 @@ public class TaskTracker {
 	}
 	
 	public void reportFinished(int taskId) {
-		runningTasks.remove(taskId);
-		finishedTasks.add(taskId);
+		synchronized (finishedTasks) {
+			System.out.println("Task " + taskId + " finished.");
+			runningTasks.remove(taskId);
+			finishedTasks.add(taskId);
+		}
 	}
 	
 	public void reportFailed(int taskId) {
-		failedTasks.add(taskId);
-		runningTasks.remove(taskId);
+		synchronized (failedTasks) {
+			failedTasks.add(taskId);
+			runningTasks.remove(taskId);
+		}
 	}
 	
 	public static void main(String[] args) {

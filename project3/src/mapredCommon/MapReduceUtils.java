@@ -40,6 +40,7 @@ public class MapReduceUtils {
 				returnValue = clazz.newInstance();
 			}
 		}
+		jarFile.close();
 		return returnValue;
 	}
 	

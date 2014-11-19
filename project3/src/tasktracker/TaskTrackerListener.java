@@ -15,7 +15,7 @@ import java.util.List;
 
 import mapredCommon.OutputPath;
 
-public class TaskTrackerListener implements Runnable{
+public class TaskTrackerListener implements Runnable {
 	ServerSocket listenerSocket;
 	
 	//Buffer size for transferring file
@@ -40,13 +40,14 @@ public class TaskTrackerListener implements Runnable{
 				System.out.println("Listener: accepted connection from " 
 						+ connectionSocket.getInetAddress() + ":" 
 						+ connectionSocket.getPort());
+				System.out.println("cao");
 				ObjectInputStream inStream = new ObjectInputStream(connectionSocket.getInputStream());
 				ObjectOutputStream outStream = new ObjectOutputStream(connectionSocket.getOutputStream());
-				
 				//Receive the object describing the map output path
 				OutputPath mapOutputPath = (OutputPath)inStream.readObject();
-				
+				System.out.println("hahahaha");
 				File folder = new File(TaskTracker.getInstance().getMapOutputDir());
+				System.out.println("Listener: reading " + folder.getAbsolutePath());
 				File[] filesArray = folder.listFiles();
 				List<File> listOfFiles = new ArrayList<File>();
 				String prefix = "map" + mapOutputPath.getJob().getJobId();
@@ -61,6 +62,7 @@ public class TaskTrackerListener implements Runnable{
 				
 				//Send the file count
 				outStream.writeObject(fileCount);
+				outStream.flush();
 				
 				
 				for (int i = 0; i < listOfFiles.size(); i++) {
@@ -68,7 +70,7 @@ public class TaskTrackerListener implements Runnable{
 					File file = listOfFiles.get(i);
 					Long fileSize = file.length();
 					outStream.writeObject(fileSize);
-					
+					outStream.flush();
 					byte[] buffer = new byte[FILE_BUFFER_SIZE];
 					BufferedInputStream fileInput = new BufferedInputStream(new FileInputStream(file));
 					
@@ -76,6 +78,7 @@ public class TaskTrackerListener implements Runnable{
 					int bytesRead = 0;
 					while ((bytesRead = fileInput.read(buffer, 0, buffer.length)) != -1) {
 						outStream.write(buffer, 0, bytesRead);
+						outStream.flush();
 					}
 					fileInput.close();
 				}

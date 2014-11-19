@@ -19,6 +19,11 @@ public class DatanodeInfo implements Serializable {
 		this.status = DatanodeStatus.ALIVE;
 	}
 	
+	public DatanodeInfo(String address, int port) {
+		this.address = address;
+		this.port = port;
+	}
+	
 	public String getAddress() {
 		return address;
 	}

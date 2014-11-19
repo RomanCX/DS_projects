@@ -29,26 +29,35 @@ public class RecordReader {
 		
 		tokens = new ArrayList<String>();
 		StringTokenizer st = new StringTokenizer(block.getData(), "\n");
+		System.out.println(block.getData());
+		System.out.println(st);
 		while (st.hasMoreTokens()) {
 			tokens.add(st.nextToken());
 		}
 		this.delim = delim;
 		this.idx = 0;
+		System.out.println(tokens);
 	}
 	
 	public boolean hasNext() {
 		return idx < tokens.size();
 	}
 	
-	public String nextKey() {
-		int pos = tokens.get(idx).indexOf(delim);
-		return tokens.get(idx).substring(0, pos);
+	public int nextKey() {
+		//int pos = tokens.get(idx).indexOf(delim);
+		//return tokens.get(idx).substring(0, pos);
+		return idx;
 	}
 	
 	public String nextValue() {
+		/*
 		int pos = tokens.get(idx).indexOf(delim);
 		String value = tokens.get(idx).substring(pos + delim.length());
 		idx++;
 		return value;
+		*/
+		String returnValue = tokens.get(idx);
+		idx++;
+		return returnValue;
 	}
 }

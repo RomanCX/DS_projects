@@ -1,6 +1,8 @@
 package jobtracker;
 
-public class JobProgress {
+import java.io.Serializable;
+
+public class JobProgress implements Serializable {
 	private int numMapTasks;
 	private int numReduceTasks;
 	private int mapTasksLeft;

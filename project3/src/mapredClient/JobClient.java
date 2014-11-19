@@ -13,11 +13,14 @@ import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import jobtracker.JobProgress;
 import mapredCommon.Job;
 import protocals.JobTrackerProtocol;
 
 public class JobClient {
-	private static final String cnfFile = "mapred.cnf";
+	private static final String mapredCnf = "../conf/mapred.cnf";
+	private static final String dfsCnf = "../conf/dfs.cnf";
+	private static final long frequency = 2000;
 	private static String jobTrackerAddr;
 	private static int jobTrackerPort;
 	private static JobTrackerProtocol jobTracker;
@@ -40,6 +43,22 @@ public class JobClient {
 			int jobId;
 			if ((jobId = jobTracker.submitJob(job)) > 0) {
 				System.out.println("Submit job " + jobId);
+				while (true) {
+					JobProgress progress = jobTracker.checkProgress(jobId);
+					System.out.println("map task: " + 
+							Math.round(progress.getMapProgress() * 100) + "%");
+					System.out.println("reduce task: " +
+							Math.round(progress.getReduceProgress() * 100) + "%");
+					if (progress.isFinished()) {
+						System.out.println("job finished");
+						break;
+					}
+					try {
+						Thread.sleep(frequency);
+					} catch (InterruptedException e) {
+						// ignore
+					}
+				}
 			}
 			else {
 				System.out.println("fail to submit job");
@@ -53,12 +72,14 @@ public class JobClient {
 	public static boolean init() {
 		Properties pro = new Properties();
 		try {
-			pro.load(new FileReader(cnfFile));
-			String name = pro.getProperty("jobtracker.name");
+			pro.load(new FileReader(dfsCnf));
+			String name = pro.getProperty("fs.default.name");
 			int pos1 = name.indexOf("//");
 			int pos2 = name.indexOf(":", pos1 + 2);
 			jobTrackerAddr = name.substring(pos1 + 2, pos2);
-			jobTrackerPort = Integer.parseInt(name.substring(pos2 + 1));
+			pro.clear();
+			pro.load(new FileReader(mapredCnf));
+			jobTrackerPort = Integer.parseInt(pro.getProperty("jobtracker.port"));
 			Registry registry = LocateRegistry.getRegistry(jobTrackerAddr,
 															jobTrackerPort);
 			jobTracker = (JobTrackerProtocol)registry.lookup("jobtracker");
@@ -72,24 +93,29 @@ public class JobClient {
 	public static Job initJob(String[] args) {
 		String input = null;
 		String output = null;
-		String mapper = null;
-		String reducer = null;
+		String jarFile = null;
+		String delim = "\t";
+		int numReduceTasks = 0;
 		
 		for (int i = 0; i < args.length; ++i) {
-			if (args.equals("-input")) {
+			if (args[i].equals("-input")) {
 				input = args[i + 1];
 				i++;
 			}
-			else if (args.equals("-output")) {
+			else if (args[i].equals("-output")) {
 				output = args[i + 1];
 				i++;
 			}
-			else if (args.equals("-mapper")) {
-				mapper = args[i + 1];
+			else if (args[i].equals("-jar")) {
+				jarFile = args[i + 1];
 				i++;
 			}
-			else if (args.equals("-reducer")) {
-				reducer = args[i + 1];
+			else if (args[i].equals("-reducenum")) {
+				numReduceTasks = Integer.parseInt(args[i + 1]);
+				i++;
+			}
+			else if (args[i].equals("-delim")) {
+				delim = args[i + 1];
 				i++;
 			}
 			else {
@@ -98,6 +124,6 @@ public class JobClient {
 			}
 		}
 		
-		return new Job(input, output, mapper, reducer);
+		return new Job(input, output, jarFile, delim, numReduceTasks);
 	}
 }

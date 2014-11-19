@@ -2,7 +2,7 @@ package mapredCommon;
 
 import java.io.Serializable;
 
-public abstract class Task implements Serializable {
+public abstract class Task implements Serializable, Runnable {
 	int taskId;
 	Job job;
 	String tmpDir;
@@ -19,5 +19,5 @@ public abstract class Task implements Serializable {
 	public int getTaskId() {
 		return taskId;
 	}
-	public abstract void run() throws Exception;
+	public abstract void run();
 }

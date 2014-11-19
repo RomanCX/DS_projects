@@ -30,7 +30,7 @@ import protocals.Operation;
 public class Datanode implements Runnable {
 	
 	// configuration file for datanode
-	private static final String cnfFile = "datanode.cnf";
+	private static final String cnfFile = "../conf/dfs.cnf";
 	//host name of namenode
 	private String namenodeAddr; 
 	// port numberof namenode
@@ -98,7 +98,7 @@ public class Datanode implements Runnable {
 			// register datanode on namenode 
 			Registry registry = LocateRegistry.getRegistry(namenodeAddr);
 			namenode = (NamenodeProtocal)registry.lookup("namenode");
-			myAddr = InetAddress.getLocalHost().getHostName();
+			myAddr = InetAddress.getLocalHost().getHostAddress();
 			DnRegistration dr = namenode.register(myAddr, myPort);
 			nodeId = dr.getNodeId();
 			heartBeatInterval = dr.getInterval();
@@ -223,6 +223,7 @@ public class Datanode implements Runnable {
 			String line;
 			while ((line = br.readLine()) != null) {
 				sb.append(line);
+				sb.append("\n");
 			}
 			oos.writeObject(new Block(blockId, sb.toString()));
 			oos.flush();

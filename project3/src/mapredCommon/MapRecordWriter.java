@@ -55,7 +55,11 @@ public class MapRecordWriter implements RecordWriter {
 				writer.write(job.getDelim());
 				writer.write(entry.getValue());
 				writer.write("\n");
+				System.out.println("key " + entry.getKey());
+				System.out.println("value " + entry.getValue());
 			}
+			writer.flush();
+			writer.close();
 		}
 	}
 }

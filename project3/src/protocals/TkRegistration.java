@@ -1,6 +1,8 @@
 package protocals;
 
-public class TkRegistration {
+import java.io.Serializable;
+
+public class TkRegistration implements Serializable {
 	private int maxAllowedTasks;
 	private int taskTrackerId;
 	private int interval;

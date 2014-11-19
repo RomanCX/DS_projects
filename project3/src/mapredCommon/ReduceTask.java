@@ -63,6 +63,7 @@ public class ReduceTask extends Task {
 
 	@Override
 	public void run() {
+		System.out.println("Reduce task " + taskId + " started");
 		try {
 			fetchFiles();
 			sortFiles();
@@ -116,20 +117,25 @@ public class ReduceTask extends Task {
 	}
 	
 	private void fetchFiles() {
+		System.out.println("Fetching files");
 		try {
 
 			for (int i = 0; i < taskTrackers.size(); i++) {
 				TaskTrackerInfo taskTracker = taskTrackers.get(i);
 				Socket socket = new Socket(taskTracker.getAddress(), taskTracker.getPort());
+				System.out.println("Reducer: connecting to " 
+						+ taskTracker.getAddress() + taskTracker.getPort());
+				System.out.println("womeiyouyaofa");
 				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 				
 				//Send the requesting map output path
 				outStream.writeObject(outputPath);
+				outStream.flush();
 				
 				//Receive the file count
 				Integer fileCount = inStream.readInt();
-				
+				System.out.println("Reducer: file count" + fileCount);
 				for (int j = 0; i < fileCount; i++) {
 					//Receive the file length
 					Long fileSize = inStream.readLong();
@@ -180,6 +186,7 @@ public class ReduceTask extends Task {
 	 * just-deleted pair belonged.
 	 */
 	private void sortFiles() throws IOException {
+		System.out.println("Sorting files");
 		List<BufferedReader> readers = new ArrayList<BufferedReader>();
 		for (int i = 0; i < mapOutFiles.size(); i++) {
 			readers.add(new BufferedReader(new FileReader(mapOutFiles.get(i))));
@@ -242,6 +249,7 @@ public class ReduceTask extends Task {
 	 * Upload the local reduce output file to HDFS
 	 */
 	private void uploadOutput() throws Exception  {
+		System.out.println("Uploading output to HDFS");
 		String jobTrackerAddress = TaskTracker.getInstance().getJobTrackerAddress();
 		int jobTrackerPort = TaskTracker.getInstance().getJobTrackerPort();
 		DfsFileWriter writer = new DfsFileWriter(jobTrackerAddress, jobTrackerPort);

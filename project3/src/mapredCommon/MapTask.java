@@ -14,7 +14,7 @@ import java.util.jar.JarFile;
 import tasktracker.TaskTracker;
 import namenode.DatanodeInfo;
 
-public class MapTask extends Task implements Runnable {
+public class MapTask extends Task {
 	// input block of this map task
 	private int blockId;
 	// info of datanode from which map task can fetch its input 
@@ -33,6 +33,7 @@ public class MapTask extends Task implements Runnable {
 	
 	@Override
 	public void run() {
+		System.out.println("Map task " + taskId + " started.");
 		RecordReader reader;
 		try {
 			reader = new RecordReader(blockId, datanode, job.getDelim());

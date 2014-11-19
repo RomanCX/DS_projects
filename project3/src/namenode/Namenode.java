@@ -53,7 +53,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	public static final String DEFAULT_NAMENODE_IMAGE_FILENAME = "namenode_image";
 	public static final int DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
 	public static final int DEFAULT_REGISTRY_PORT = 1099;
-	public static final String CONFIG_FILE_NAME = "namenode.cnf";
+	public static final String CONFIG_FILE_NAME = "../conf/dfs.cnf";
 	
 	
 	public Namenode() {

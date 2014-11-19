@@ -31,15 +31,13 @@ public class JobTracker implements JobTrackerProtocol {
 	
 	// some constants
 	private static final String JOBTRACKER_RMI_NAME = "jobtracker";
-	private static final String MAPRED_CONFIGURE_FILE="mapred.cnf";
-	private static final String DFS_CONFIGURE_FILE="dfs.cnf";
+	private static final String MAPRED_CONFIGURE_FILE="../conf/mapred.cnf";
+	private static final String DFS_CONFIGURE_FILE="../conf/dfs.cnf";
 		
 	// port number of jobTracker
 	private int jobTrackerPort;
-	// max number of map tasks that can run in a task tracker simultaneously
-	private int maxMapTasks;
-	// max number of reducer tasks that can run in a task tracker simultaneously
-	private int maxReduceTasks;
+	// number of tasks which can be executed in a  tasktraceker simultaneously
+	private int maxTasks;
 	// interval for heart beat
 	private int heartBeatInterval;
 	// directory for storing inputs and outputs of tasks
@@ -115,8 +113,7 @@ public class JobTracker implements JobTrackerProtocol {
 		pro.clear();
 		pro.load(new FileReader(MAPRED_CONFIGURE_FILE));
 		jobTrackerPort = Integer.parseInt(pro.getProperty("jobtracker.port"));
-		maxMapTasks = Integer.parseInt(pro.getProperty("tasktracker.map.tasks.maximum"));
-		maxReduceTasks = Integer.parseInt(pro.getProperty("tasktracker.reduce.tasks.maximum"));
+		maxTasks = Integer.parseInt(pro.getProperty("tasktracker.tasks.maximum"));
 		heartBeatInterval = Integer.parseInt(pro.getProperty("tasktracker.heartbeat.interval"));
 		tmpDir = pro.getProperty("mapred.tmp.dir");
 	}
@@ -134,7 +131,9 @@ public class JobTracker implements JobTrackerProtocol {
 		nextTaskTrackerId++;
 		taskTrackers.add(newTaskTracker);
 		trackerIdToTracker.put(id, newTaskTracker);
-		return new TkRegistration(maxMapTasks + maxReduceTasks, id,
+		trackerIdToRunningTaskIds.put(id, new HashSet<Integer>());
+		trackerIdToCompletedMapTaskIds.put(id, new HashSet<Integer>());
+		return new TkRegistration(maxTasks, id,
 								heartBeatInterval, tmpDir);
 	}
 	
@@ -150,7 +149,9 @@ public class JobTracker implements JobTrackerProtocol {
 		mapTasks.clear();
 		reduceTasks.clear();
 		mapTaskIdToDns.clear();
-		trackerIdToCompletedMapTaskIds.clear();
+		for (Set<Integer> tasks : trackerIdToCompletedMapTaskIds.values()) {
+			tasks.clear();
+		}
 		currentJob = null;
 		while (jobQueue.isEmpty() == false) {
 			currentJob = jobQueue.poll();
@@ -182,11 +183,11 @@ public class JobTracker implements JobTrackerProtocol {
 				String address = datanode.getAddress();
 				int port = datanode.getPort();
 				belonging.add(address);
-				if (dnToMapTaskIds.containsKey(datanode) == false) {
+				if (dnToMapTaskIds.containsKey(address) == false) {
 					dnToMapTaskIds.put(address, new HashSet<Integer>());
 					addressToPort.put(address, datanode.getPort());
 				}
-				Set<Integer> taskIds = dnToMapTaskIds.get(datanode);
+				Set<Integer> taskIds = dnToMapTaskIds.get(address);
 				taskIds.add(nextMapTaskId);
 			}
 			// for every map, also record which datanodes it can fetch its input 
@@ -197,31 +198,35 @@ public class JobTracker implements JobTrackerProtocol {
 		// determine the number of reduce tasks if client doesn't speficy
 		reduceTasksLeft = currentJob.getNumReduceTasks();
 		if (currentJob.getNumReduceTasks() == 0) {
-			reduceTasksLeft = maxReduceTasks * trackerIdToTracker.size();
+			reduceTasksLeft = maxTasks * trackerIdToTracker.size();
 			currentJob.setNumReduceTasks(reduceTasksLeft);
 		}
 	}
 	
 	private void generateReduceTasks() {
+		System.out.println("number of reduceTasks: " + currentJob.getNumReduceTasks());
 		for (int i = 0; i < currentJob.getNumReduceTasks(); ++i) {
 			/*
 			 * When taskTracker changes in case of failure, the actual object
 			 * chages automatically. So no need to change the reference
 			 */
 			reduceTasks.add(new ReduceTask(i, currentJob, taskTrackers));
+			reduceTasksToBeRan.add(i);
 		}
+		System.out.println("reduceTasksToBeRan" + reduceTasksToBeRan);
 	}
 	
 	/* Select an appropriate map task for this taskTracker */
-	private Task selectMapTask(int taskTrackerId) {
+	private MapTask selectMapTask(int taskTrackerId) {
 		String address = trackerIdToTracker.get(taskTrackerId).getAddress();
 		Set<Integer> taskIds = dnToMapTaskIds.get(address);
-		Task mapTask = null;
-		
+		MapTask mapTask = null;
+		System.out.println("tasktracker address is " + address);
 		// find a map task whose input file is in this task tracker
-		if (taskIds != null) {
+		if (taskIds != null && taskIds.size() > 0) {
 			Iterator<Integer> iter = taskIds.iterator();
 			mapTask = mapTasks.get(iter.next());
+			mapTask.setDatanode(new DatanodeInfo(address, addressToPort.get(address)));
 			iter.remove();
 		}
 		// else just find an available map task
@@ -231,6 +236,9 @@ public class JobTracker implements JobTrackerProtocol {
 				if (taskIds.size() > 0) {
 					Iterator<Integer> iter = taskIds.iterator();
 					mapTask = mapTasks.get(iter.next());
+					address = (String)entry.getKey();
+					mapTask.setDatanode(new DatanodeInfo(address, 
+											addressToPort.get(address)));
 					iter.remove();
 					break;
 				}
@@ -249,6 +257,8 @@ public class JobTracker implements JobTrackerProtocol {
 	
 	/* Select a reduce task for task tracker */
 	private Task selectReduceTask() {
+		if (reduceTasksToBeRan.size() == 0)
+			return null;
 		return reduceTasks.get(reduceTasksToBeRan.remove(0));
 	}
 	
@@ -281,8 +291,10 @@ public class JobTracker implements JobTrackerProtocol {
 		 * and get new job
 		 * 
 		 */
+		System.out.println("finished tasks" + finishedTasks);
 		Set<Integer> runningTaskIds = trackerIdToRunningTaskIds.get(taskTrackerId);
 		Set<Integer> completedTaskIds = trackerIdToCompletedMapTaskIds.get(taskTrackerId);
+		System.out.println("completed tasks " + completedTaskIds);
 		for (int taskId : finishedTasks) {
 			runningTaskIds.remove(taskId);
 			// then the finished task must be map task
@@ -343,6 +355,7 @@ public class JobTracker implements JobTrackerProtocol {
 			if (task == null)
 				break;
 			tasksToBeAssigned.add(task);
+			trackerIdToRunningTaskIds.get(taskTrackerId).add(task.getTaskId());
 		}
 		return new HeartBeatResponse(tasksToBeAssigned);
 	}
