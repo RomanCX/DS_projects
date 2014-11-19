@@ -18,12 +18,12 @@ import java.util.TreeMap;
 public class MapRecordWriter implements RecordWriter {
 	private Job job;
 	private List<BufferedWriter> outWriters;
-	private HashMap<Integer, TreeMap<String, String>> outResults;
+	private TreeMap<String, List<String>> outResult;
 	
 	public MapRecordWriter(Job job, int taskId, String outputDir) throws IOException {
 		this.job = job;
 		this.outWriters = new ArrayList<BufferedWriter>();
-		this.outResults = new HashMap<Integer, TreeMap<String,String>>();
+		this.outResult = new TreeMap<String, List<String>>();
 		for (int i = 0; i < job.getNumReduceTasks(); i++) {
 			OutputPath mapOutputPath = new OutputPath(job, taskId, i);
 			String outputPath = mapOutputPath.getMapPath(outputDir);
@@ -32,34 +32,39 @@ public class MapRecordWriter implements RecordWriter {
 				outFile.delete();
 			}
 			this.outWriters.add(new BufferedWriter(new FileWriter(outFile, true)));
-			
-			outResults.put(i, new TreeMap<String, String>());
 		}
 
 	}
 	
 	@Override
 	public void write(String key, String value) throws IOException {
-		int hashCode = key.hashCode();
-		int reduceNum = hashCode % job.getNumReduceTasks();
-		TreeMap<String, String> outResult = outResults.get((Integer)reduceNum);
-		outResult.put(key, value);
+		List<String> values = outResult.get(key);
+		if (values == null) {
+			values = new ArrayList<String>();
+			outResult.put(key, values);
+		}
+		values.add(value);
 	}
 	
 	public void writeAll() throws IOException {
-		for (int i = 0; i < job.getNumReduceTasks(); i++) {
-			TreeMap<String, String> outResult = outResults.get((Integer)i);
-			BufferedWriter writer = outWriters.get(i);
-			for (Entry<String, String> entry : outResult.entrySet()) {
-				writer.write(entry.getKey());
+		for (Entry<String, List<String>> entry: outResult.entrySet()) {
+			String key = entry.getKey();
+			List<String> values = entry.getValue();
+			int hashCode = key.hashCode();
+			int reduceNum = hashCode % job.getNumReduceTasks();
+			BufferedWriter writer = outWriters.get(reduceNum);
+			for (String value : values) {
+				writer.write(key);
 				writer.write(job.getDelim());
-				writer.write(entry.getValue());
+				writer.write(value);
 				writer.write("\n");
-				System.out.println("key " + entry.getKey());
-				System.out.println("value " + entry.getValue());
 			}
-			writer.flush();
-			writer.close();
+		}
+		
+		for (int i = 0; i < job.getNumReduceTasks(); i++) {
+			outWriters.get(i).flush();
+			outWriters.get(i).close();
+
 		}
 	}
 }

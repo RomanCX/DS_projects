@@ -37,6 +37,9 @@ public class Job implements Serializable {
 	}
 	
 	public String getOutputPath() {
+		if (!outputPath.endsWith("/")) {
+			outputPath += "/";
+		}
 		return outputPath;
 	}
 	

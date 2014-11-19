@@ -57,7 +57,7 @@ public class TaskTracker {
 			jobTracker = (JobTrackerProtocol) registry.lookup(JOB_TRACKER_NAME);
 			listenerSocket = new ServerSocket(0);
 			TkRegistration tkRegistration = jobTracker.register(InetAddress.getLocalHost().getHostAddress(), listenerSocket.getLocalPort());
-			mapOutputDir = tkRegistration.getTmpDir();
+			setMapOutputDir(tkRegistration.getTmpDir());
 			heartBeatInterval = tkRegistration.getInterval();
 			maxAllowedTasks = tkRegistration.getMaxAllowedTasks();
 			if (numProcessors < maxAllowedTasks) {

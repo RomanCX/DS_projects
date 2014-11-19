@@ -1,6 +1,7 @@
 package examples;
 
 import java.io.IOException;
+import java.util.StringTokenizer;
 
 import mapredCommon.Mapper;
 import mapredCommon.RecordWriter;
@@ -8,7 +9,9 @@ import mapredCommon.RecordWriter;
 public class DegreeCountMapper implements Mapper {
 	public void map(int key, String value, RecordWriter writer) {
 		try {
-			writer.write(value, "1");
+			StringTokenizer st = new StringTokenizer(value, ",");
+			writer.write(st.nextToken(), "1");
+			writer.write(st.nextToken(), "1");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

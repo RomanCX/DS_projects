@@ -29,8 +29,6 @@ public class RecordReader {
 		
 		tokens = new ArrayList<String>();
 		StringTokenizer st = new StringTokenizer(block.getData(), "\n");
-		System.out.println(block.getData());
-		System.out.println(st);
 		while (st.hasMoreTokens()) {
 			tokens.add(st.nextToken());
 		}

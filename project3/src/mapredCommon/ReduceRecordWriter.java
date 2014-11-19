@@ -24,6 +24,11 @@ public class ReduceRecordWriter implements RecordWriter {
 		writer.write(key);
 		writer.write(job.getDelim());
 		writer.write(value);
+		writer.newLine();
+	}
+	
+	public void flush() throws IOException {
+		writer.flush();
 	}
 
 }

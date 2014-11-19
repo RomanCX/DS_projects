@@ -42,6 +42,8 @@ public class JobTracker implements JobTrackerProtocol {
 	private int heartBeatInterval;
 	// directory for storing inputs and outputs of tasks
 	private String tmpDir;
+	// port number of namenode
+	private int namenodePort;
 	// protocol of name node
 	private NamenodeProtocal namenode;
 	
@@ -105,7 +107,7 @@ public class JobTracker implements JobTrackerProtocol {
 		int pos1 = name.indexOf("//");
 		int pos2 = name.indexOf(":", pos1 + 2);
 		String namenodeAddr = name.substring(pos1 + 2, pos2);
-		int namenodePort = Integer.parseInt(name.substring(pos2 + 1));
+		namenodePort = Integer.parseInt(name.substring(pos2 + 1));
 		Registry registry = LocateRegistry.getRegistry(namenodeAddr, namenodePort);
 		namenode = (NamenodeProtocal)registry.lookup("namenode");
 			
@@ -210,7 +212,7 @@ public class JobTracker implements JobTrackerProtocol {
 			 * When taskTracker changes in case of failure, the actual object
 			 * chages automatically. So no need to change the reference
 			 */
-			reduceTasks.add(new ReduceTask(i, currentJob, taskTrackers));
+			reduceTasks.add(new ReduceTask(i, currentJob, taskTrackers, namenodePort));
 			reduceTasksToBeRan.add(i);
 		}
 		System.out.println("reduceTasksToBeRan" + reduceTasksToBeRan);

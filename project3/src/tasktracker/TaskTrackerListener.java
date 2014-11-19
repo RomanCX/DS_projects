@@ -40,12 +40,10 @@ public class TaskTrackerListener implements Runnable {
 				System.out.println("Listener: accepted connection from " 
 						+ connectionSocket.getInetAddress() + ":" 
 						+ connectionSocket.getPort());
-				System.out.println("cao");
 				ObjectInputStream inStream = new ObjectInputStream(connectionSocket.getInputStream());
 				ObjectOutputStream outStream = new ObjectOutputStream(connectionSocket.getOutputStream());
 				//Receive the object describing the map output path
 				OutputPath mapOutputPath = (OutputPath)inStream.readObject();
-				System.out.println("hahahaha");
 				File folder = new File(TaskTracker.getInstance().getMapOutputDir());
 				System.out.println("Listener: reading " + folder.getAbsolutePath());
 				File[] filesArray = folder.listFiles();
@@ -55,21 +53,22 @@ public class TaskTrackerListener implements Runnable {
 				for (File file : filesArray) {
 					String fileName = file.getName();
 					if (fileName.startsWith(prefix) && fileName.endsWith(suffix)) {
+						System.out.println("Listen: File found: " + file.getAbsolutePath());
 						listOfFiles.add(file);
 					}
 				}
-				Integer fileCount = listOfFiles.size();
+				int fileCount = listOfFiles.size();
 				
 				//Send the file count
-				outStream.writeObject(fileCount);
+				outStream.writeInt(fileCount);
 				outStream.flush();
-				
+				System.out.println("Listener: files " + listOfFiles);
 				
 				for (int i = 0; i < listOfFiles.size(); i++) {
 					//Send the file size
 					File file = listOfFiles.get(i);
 					Long fileSize = file.length();
-					outStream.writeObject(fileSize);
+					outStream.writeLong(fileSize);
 					outStream.flush();
 					byte[] buffer = new byte[FILE_BUFFER_SIZE];
 					BufferedInputStream fileInput = new BufferedInputStream(new FileInputStream(file));

@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,7 @@ public class ReduceTask extends Task {
 	private File sortedFile;
 	private File reduceOutputTmpFile;
 	private OutputPath outputPath;
+	private int namenodePort;
 	
 	private static final int FILE_BUFFER_SIZE = 1024 * 1024;
 	
@@ -44,12 +46,18 @@ public class ReduceTask extends Task {
 	}
 	
 	public ReduceTask(int taskId, Job job,
-				List<TaskTrackerInfo> taskTrackers) {
+				List<TaskTrackerInfo> taskTrackers, int namenodePort) {
 		super(taskId, job);
 		this.taskTrackers = taskTrackers;
 		this.outputPath = new OutputPath(job, taskId, taskId);
 		mapOutFiles = new ArrayList<File>();
+		this.namenodePort = namenodePort;
 
+		
+	}
+
+	
+	private void initFiles() {
 		sortedFile = new File(outputPath.getReduceSortedPath(tmpDir));
 		if (sortedFile.exists()) {
 			sortedFile.delete();
@@ -60,11 +68,11 @@ public class ReduceTask extends Task {
 			reduceOutputTmpFile.delete();
 		}
 	}
-
 	@Override
 	public void run() {
 		System.out.println("Reduce task " + taskId + " started");
 		try {
+			initFiles();
 			fetchFiles();
 			sortFiles();
 			
@@ -98,7 +106,7 @@ public class ReduceTask extends Task {
 				}
 			}
 			reducer.reduce(lastKey, values.iterator(), writer);
-
+			writer.flush();
 			uploadOutput();
 			
 			reader.close();
@@ -107,10 +115,12 @@ public class ReduceTask extends Task {
 			e.printStackTrace();
 			TaskTracker.getInstance().reportFailed(taskId);
 		} finally {
+			/*
 			sortedFile.delete();
 			for (File file : mapOutFiles) {
 				file.delete();
 			}
+			*/
 		}
 		
 		
@@ -123,32 +133,37 @@ public class ReduceTask extends Task {
 			for (int i = 0; i < taskTrackers.size(); i++) {
 				TaskTrackerInfo taskTracker = taskTrackers.get(i);
 				Socket socket = new Socket(taskTracker.getAddress(), taskTracker.getPort());
-				System.out.println("Reducer: connecting to " 
-						+ taskTracker.getAddress() + taskTracker.getPort());
-				System.out.println("womeiyouyaofa");
-				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+				/*
+				if (taskTracker.getAddress().equals(InetAddress.getLocalHost().getHostAddress())) {
+					socket = new Socket("localhost", taskTracker.getPort());
+				} else {
+					socket = new Socket(taskTracker.getAddress(), taskTracker.getPort());
+				}
+				*/
 				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 				
 				//Send the requesting map output path
 				outStream.writeObject(outputPath);
 				outStream.flush();
 				
 				//Receive the file count
-				Integer fileCount = inStream.readInt();
-				System.out.println("Reducer: file count" + fileCount);
+				int fileCount = inStream.readInt();
 				for (int j = 0; i < fileCount; i++) {
 					//Receive the file length
-					Long fileSize = inStream.readLong();
+					long fileSize = inStream.readLong();
+					System.out.println("FileSize: " + fileSize);
 					
 					//Create the file and put to outputPath list
 					File tmpFile = new File(outputPath.getReduceTmpPath(tmpDir, i, j));
+					System.out.println("tmpFile: " + tmpFile.getAbsolutePath());
 					if (tmpFile.exists()) {
 						tmpFile.delete();
 					}
 					mapOutFiles.add(tmpFile);
 					
 					//Read the file from socket and write to local disk
-					FileOutputStream fileOutput = new FileOutputStream(tmpFile, true);
+					FileOutputStream fileOutput = new FileOutputStream(tmpFile);
 					byte[] buffer = new byte[FILE_BUFFER_SIZE];
 					int bytesRead = 0;
 					while (fileSize != 0) {
@@ -157,13 +172,15 @@ public class ReduceTask extends Task {
 							fileOutput.write(buffer, 0, bytesRead);
 							fileSize -= bytesRead;
 						} else {
-							bytesRead = inStream.read(buffer, 0, fileSize.intValue());
+							bytesRead = inStream.read(buffer, 0, (int)fileSize);
 							fileOutput.write(buffer, 0, bytesRead);
 							fileSize -= bytesRead;
+							System.out.println(bytesRead);
+							System.out.println(new String(buffer));
 						}
 					}
+					fileOutput.flush();
 					fileOutput.close();
-					
 				}
 				
 				
@@ -189,6 +206,7 @@ public class ReduceTask extends Task {
 		System.out.println("Sorting files");
 		List<BufferedReader> readers = new ArrayList<BufferedReader>();
 		for (int i = 0; i < mapOutFiles.size(); i++) {
+			System.out.println("File: " + mapOutFiles.get(i).getAbsolutePath());
 			readers.add(new BufferedReader(new FileReader(mapOutFiles.get(i))));
 		}
 		BufferedWriter writer = new BufferedWriter(new FileWriter(sortedFile));
@@ -200,8 +218,11 @@ public class ReduceTask extends Task {
 			int index = writeValueEntry(heap, writer);
 			readLinePutHeap(heap, readers, index);
 		}
+		writer.flush();
+		writer.close();
 			
 	}
+	
 	
 	/*
 	 * Read a line from reader(i). This is the file that has the smallest record and 
@@ -238,6 +259,7 @@ public class ReduceTask extends Task {
 			writer.write(key);
 			writer.write(job.getDelim());
 			writer.write(valueEntry.value);
+			writer.write("\n");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -251,9 +273,8 @@ public class ReduceTask extends Task {
 	private void uploadOutput() throws Exception  {
 		System.out.println("Uploading output to HDFS");
 		String jobTrackerAddress = TaskTracker.getInstance().getJobTrackerAddress();
-		int jobTrackerPort = TaskTracker.getInstance().getJobTrackerPort();
-		DfsFileWriter writer = new DfsFileWriter(jobTrackerAddress, jobTrackerPort);
-		if (writer.write(reduceOutputTmpFile.getAbsolutePath(), job.getOutputPath()) == false) {
+		DfsFileWriter writer = new DfsFileWriter(jobTrackerAddress, namenodePort);
+		if (writer.write(reduceOutputTmpFile.getAbsolutePath(), (job.getOutputPath() + "part" + taskId)) == false) {
 			System.out.println("Failed to get the writer");
 			throw new IOException();
 		}
