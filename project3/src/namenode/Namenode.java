@@ -272,11 +272,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	@Override
 	public List<String> ls() throws RemoteException {
 		List<String> returnValue = new ArrayList<String>();
-		Iterator<Entry<String, List<Integer>>> iterator = files.entrySet().iterator();
-		while (iterator.hasNext()) {
-			Entry<String, List<Integer>> pair = iterator.next();
-			returnValue.add(pair.getKey());
-		}
+		returnValue.addAll(files.keySet());
 		return returnValue;
 	}
 
@@ -307,6 +303,18 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			rwLock.readLock().unlock();
 		}
 		return returnValue;	
+	}
+
+
+	@Override
+	public List<String> ls(String prefix) throws RemoteException {
+		List<String> returnValue = new ArrayList<String>();
+		for (String fileName : files.keySet()) {
+			if (fileName.startsWith(prefix)) {
+				returnValue.add(fileName);
+			}
+		}
+		return returnValue;
 	}
 
 }
