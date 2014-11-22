@@ -43,16 +43,25 @@ public class JobClient {
 			int jobId;
 			if ((jobId = jobTracker.submitJob(job)) > 0) {
 				System.out.println("Submit job " + jobId);
+				long lastMapProgress = -1;
+				long lastReduceProgress = 0;
+				long currentMapProgress = 0;
+				long currentReduceProgress = 0;
 				while (true) {
 					JobProgress progress = jobTracker.checkProgress(jobId);
-					System.out.println("map task: " + 
-							Math.round(progress.getMapProgress() * 100) + "%");
-					System.out.println("reduce task: " +
-							Math.round(progress.getReduceProgress() * 100) + "%");
+					currentMapProgress = Math.round(progress.getMapProgress() * 100);
+					currentReduceProgress = Math.round(progress.getReduceProgress() * 100);
+					if (currentMapProgress == lastMapProgress &&
+							currentReduceProgress == lastReduceProgress)
+						continue;
+					System.out.print("map task: " + currentMapProgress + "%");
+					System.out.println("reduce task: " + currentReduceProgress + "%");
 					if (progress.isFinished()) {
 						System.out.println("job finished");
 						break;
 					}
+					lastMapProgress = currentMapProgress;
+					lastReduceProgress = currentReduceProgress;
 					try {
 						Thread.sleep(frequency);
 					} catch (InterruptedException e) {

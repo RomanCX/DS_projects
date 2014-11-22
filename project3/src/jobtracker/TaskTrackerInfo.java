@@ -22,4 +22,11 @@ public class TaskTrackerInfo implements Serializable{
 		return port;
 	}
 	
+	public long getLastHeartBeatTime() {
+		return lastHeartBeatTime;
+	}
+	
+	public void updateLastHeartBeatTime(long heartBeatTime) {
+		this.lastHeartBeatTime = heartBeatTime;
+	}
 }

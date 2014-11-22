@@ -27,4 +27,20 @@ public class JobProgress implements Serializable {
 	public boolean isFinished() {
 		return reduceTasksLeft == 0;
 	}
+	
+	public int getMapTasksLeft() {
+		return mapTasksLeft;
+	}
+	
+	public int getReduceTasksLeft() {
+		return reduceTasksLeft;
+	}
+	
+	public void setMapTasksLeft(int mapTasksLeft) {
+		this.mapTasksLeft = mapTasksLeft;
+	}
+	
+	public void setReduceTasksLeft(int reduceTasksLeft) {
+		this.reduceTasksLeft = reduceTasksLeft;
+	}
 }
