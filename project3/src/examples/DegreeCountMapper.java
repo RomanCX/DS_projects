@@ -6,7 +6,7 @@ import java.util.StringTokenizer;
 import mapredCommon.Mapper;
 import mapredCommon.RecordWriter;
 
-public class DegreeCountMapper implements Mapper {
+public class DegreeCountMapper extends Mapper {
 	public void map(int key, String value, RecordWriter writer) {
 		try {
 			StringTokenizer st = new StringTokenizer(value, ",");

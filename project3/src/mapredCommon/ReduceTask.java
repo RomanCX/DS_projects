@@ -76,9 +76,10 @@ public class ReduceTask extends Task {
 			fetchFiles();
 			sortFiles();
 			
-			Reducer reducer = MapReduceUtils.getReducer(job.getJarFile());
-			ReduceRecordWriter writer = new ReduceRecordWriter(job, reduceOutputTmpFile);
+			Reducer reducer = MapReduceUtils.getReducer(job);
+			reducer.setup();
 			
+			ReduceRecordWriter writer = new ReduceRecordWriter(job, reduceOutputTmpFile);
 			BufferedReader reader = new BufferedReader(new FileReader(sortedFile));
 			String line = reader.readLine();
 			int pos = line.indexOf(job.getDelim());

@@ -20,7 +20,6 @@ public class MapTask extends Task {
 	// info of datanode from which map task can fetch its input 
 	private DatanodeInfo datanode;
 	// user defined mapper function
-	private Mapper mapper;
 	
 	public MapTask(int taskId, int blockId, Job job) {
 		super(taskId, job);
@@ -38,8 +37,9 @@ public class MapTask extends Task {
 		try {
 			reader = new RecordReader(blockId, datanode, job.getDelim());
 			MapRecordWriter writer = new MapRecordWriter(job, taskId, tmpDir);
-			String jarFilePath = job.getJarFile();
-			mapper = MapReduceUtils.getMapper(jarFilePath);
+			Mapper mapper;
+			mapper = MapReduceUtils.getMapper(job);
+			mapper.setup();
 			while (reader.hasNext()) {
 				mapper.map(reader.nextKey(), reader.nextValue(), writer);
 			}

@@ -9,6 +9,8 @@ public class Job implements Serializable {
 	private int jobId;
 	private String delim;
 	private int numReduceTasks;
+	private Class<Mapper> mapClass;
+	private Class<Reducer> reduceClass;
 	
 	public Job(String inputPath, String outputPath, String jarFile, 
 			String delim, int numReduceTasks) {
@@ -59,6 +61,14 @@ public class Job implements Serializable {
 		return numReduceTasks;
 	}
 	
+	public Class<Mapper> getMapClass() {
+		return mapClass;
+	}
+	
+	public Class<Reducer> getReduceClass() {
+		return reduceClass;
+	}
+	
 	public void setJobId(int jobId) {
 		this.jobId = jobId;
 	}
@@ -66,4 +76,29 @@ public class Job implements Serializable {
 	public void setNumReduceTasks(int numReduceTasks) {
 		this.numReduceTasks = numReduceTasks;
 	}
+	
+	public void setMapClass(Class<Mapper> mapClass) {
+		this.mapClass = mapClass;
+	}
+	
+	public void setReduceClass(Class<Reducer> reduceClass) {
+		this.reduceClass = reduceClass;
+	}
+	
+	public void setDelim(String delim) {
+		this.delim = delim;
+	}
+	
+	public void setJarFile(String jarFile) {
+		this.jarFile = jarFile;
+	}
+	
+	public void setInputPath(String inputPath) {
+		this.inputPath = inputPath;
+	}
+	
+	public void setOUtputPath(String outputPath) {
+		this.outputPath = outputPath;
+	}
 }
+	
