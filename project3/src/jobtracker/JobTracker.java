@@ -95,7 +95,9 @@ public class JobTracker implements JobTrackerProtocol {
 		taskTrackers = new ArrayList<TaskTrackerInfo>();
 		trackerIdToTracker = new HashMap<Integer, TaskTrackerInfo>();
 		mapTasks = new ArrayList<MapTask>();
+		blacklistOfMap = new ArrayList<Set<Integer>>();
 		reduceTasks = new ArrayList<ReduceTask>();
+		blacklistOfReduce = new ArrayList<Set<Integer>>();
 		reduceTasksToBeRan = new ArrayList<Integer>();
 		dnToMapTaskIds = new TreeMap<String, Set<Integer>>();
 		mapTaskIdToDns = new HashMap<Integer, List<String>>();
@@ -159,7 +161,9 @@ public class JobTracker implements JobTrackerProtocol {
 	     */
 		nextMapTaskId = 0;
 		mapTasks.clear();
+		blacklistOfMap.clear();
 		reduceTasks.clear();
+		blacklistOfReduce.clear();
 		mapTaskIdToDns.clear();
 		for (Set<Integer> tasks : trackerIdToCompletedMapTaskIds.values()) {
 			tasks.clear();
@@ -192,6 +196,7 @@ public class JobTracker implements JobTrackerProtocol {
 				List<DatanodeInfo> datanodes = (List<DatanodeInfo>)entry.getValue();
 				MapTask map = new MapTask(nextMapTaskId, blockId, currentJob);
 				mapTasks.add(map);
+				blacklistOfMap.add(new HashSet<Integer>());
 				List<String> belonging = new ArrayList<String>();
 				// add this map task to every node which has input file in local
 				for (DatanodeInfo datanode : datanodes) {
@@ -222,6 +227,7 @@ public class JobTracker implements JobTrackerProtocol {
 		JobProgress progress = new JobProgress(mapTasks.size(), reduceTasksNum,
 											mapTasks.size(), reduceTasksNum);
 		jobProgresses.put(currentJob.getJobId(), progress);
+		System.out.println("JobProgress is " + jobProgresses);
 	}
 	
 	/* Generate reduce tasks for current job */
@@ -234,6 +240,7 @@ public class JobTracker implements JobTrackerProtocol {
 			 */
 			reduceTasks.add(new ReduceTask(i, currentJob, taskTrackers, namenodePort));
 			reduceTasksToBeRan.add(i);
+			blacklistOfReduce.add(new HashSet<Integer>());
 		}
 		System.out.println("reduceTasksToBeRan" + reduceTasksToBeRan);
 	}
@@ -320,6 +327,9 @@ public class JobTracker implements JobTrackerProtocol {
 		trackerIdToTracker.get(taskTrackerId).
 								updateHeartBeatTime(System.currentTimeMillis());
 		
+		if (currentJob == null)
+			return new HeartBeatResponse(new ArrayList<Task>());
+		
 		/* deal with finished tasks
 		 * based on finished tasks, update some data structures
 		 * if all the map tasks are done, then generate reducer tasks
@@ -331,6 +341,8 @@ public class JobTracker implements JobTrackerProtocol {
 		Set<Integer> runningTaskIds = trackerIdToRunningTaskIds.get(taskTrackerId);
 		Set<Integer> completedTaskIds = trackerIdToCompletedMapTaskIds.get(taskTrackerId);
 		System.out.println("completed tasks " + completedTaskIds);
+		
+		System.out.println("job id " + currentJob.getJobId());
 		// get the job progress
 		JobProgress progress = jobProgresses.get(currentJob.getJobId());
 		int mapTasksLeft = progress.getMapTasksLeft();
