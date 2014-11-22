@@ -32,50 +32,13 @@ public class JobClient {
 	 *  -mapper <path of mapper>
 	 *  -reducer  <path of reducer>
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws RemoteException {
 		if (init() == false) {
 			System.out.println("fail to start client");
 			System.exit(1);
 		}
 		Job job = initJob(args);
-		
-		try {
-			int jobId;
-			if ((jobId = jobTracker.submitJob(job)) > 0) {
-				System.out.println("Submit job " + jobId);
-				long lastMapProgress = -1;
-				long lastReduceProgress = 0;
-				long currentMapProgress = 0;
-				long currentReduceProgress = 0;
-				while (true) {
-					JobProgress progress = jobTracker.checkProgress(jobId);
-					currentMapProgress = Math.round(progress.getMapProgress() * 100);
-					currentReduceProgress = Math.round(progress.getReduceProgress() * 100);
-					if (currentMapProgress == lastMapProgress &&
-							currentReduceProgress == lastReduceProgress)
-						continue;
-					System.out.print("map task: " + currentMapProgress + "%");
-					System.out.println("reduce task: " + currentReduceProgress + "%");
-					if (progress.isFinished()) {
-						System.out.println("job finished");
-						break;
-					}
-					lastMapProgress = currentMapProgress;
-					lastReduceProgress = currentReduceProgress;
-					try {
-						Thread.sleep(frequency);
-					} catch (InterruptedException e) {
-						// ignore
-					}
-				}
-			}
-			else {
-				System.out.println("fail to submit job");
-			}
-		} catch (RemoteException e) {
-			e.printStackTrace();
-			System.out.println("fail to submit job");
-		}
+		runJob(job);
 	}
 	
 	public static boolean init() {
@@ -135,4 +98,36 @@ public class JobClient {
 		
 		return new Job(input, output, jarFile, delim, numReduceTasks);
 	}
+	
+	public static void runJob(Job job) throws RemoteException {
+		int jobId;
+		if ((jobId = jobTracker.submitJob(job)) > 0) {
+			System.out.println("Submit job " + jobId);
+			long lastMapProgress = -1;
+			long lastReduceProgress = 0;
+			long currentMapProgress = 0;
+			long currentReduceProgress = 0;
+			while (true) {
+				JobProgress progress = jobTracker.checkProgress(jobId);
+				currentMapProgress = Math.round(progress.getMapProgress() * 100);
+				currentReduceProgress = Math.round(progress.getReduceProgress() * 100);
+				if (currentMapProgress == lastMapProgress &&
+						currentReduceProgress == lastReduceProgress)
+					continue;
+				System.out.print("map task: " + currentMapProgress + "%");
+				System.out.println("reduce task: " + currentReduceProgress + "%");
+				if (progress.isFinished()) {
+					System.out.println("job finished");
+					break;
+				}
+				lastMapProgress = currentMapProgress;
+				lastReduceProgress = currentReduceProgress;
+				try {
+					Thread.sleep(frequency);
+				} catch (InterruptedException e) {
+					// ignore
+				}
+			}
+		}
+	} 
 }

@@ -26,7 +26,7 @@ public class TaskTrackerInfo implements Serializable{
 		return lastHeartBeatTime;
 	}
 	
-	public void updateLastHeartBeatTime(long heartBeatTime) {
+	public void updateHeartBeatTime(long heartBeatTime) {
 		this.lastHeartBeatTime = heartBeatTime;
 	}
 }
