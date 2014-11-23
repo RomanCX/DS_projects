@@ -33,20 +33,33 @@ import protocals.Operation;
 
 
 public class Namenode implements NamenodeProtocal, Serializable {
+	//Set of alive data node ids
 	private HashSet<Integer> availableDatanodes;
+	//Map between data node id to DatanodeInfo instances
 	private HashMap<Integer, DatanodeInfo> datanodes;//<datanodeId, datanodeInfo>
+	//Map between file name and block ids of the file
 	private HashMap<String, List<Integer> > files;//<filename, blockIds>
+	//Map between block id to data node ids storing the block
 	private HashMap<Integer, List<Integer> > blocks;//<blockId, datanodeIds> 
+	//Map between data node id to queued commands(delete, shutdown)
 	private HashMap<Integer, List<Command>> commands;
+	//Map between data node id to block ids on the data node
 	private HashMap<Integer, HashSet<Integer>> datanodeBlocks;
+	//counter of data nodes
 	private int datanodeCount;
+	//counter of blocks
 	private int blockCount;
+	//Read write lock
 	private ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
+	//Timer to keep track of last image write
 	private long lastWriteToDiskTime;
+	//block size configurable by config file
 	private int blockSize;
+	//replication factor configurable by config file
 	private int replicaFactor;
-	private String namenodeImageFilename;
+	//flag indicating the system is going to shut down
 	private Boolean toShutDown = false;
+	//image path configurable by config file
 	private String imagePath;
 	
 	public static final int DEFAULT_HEARTBEAT_INTERVAL = 3000;//ms
