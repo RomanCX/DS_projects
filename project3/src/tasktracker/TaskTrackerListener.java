@@ -37,15 +37,15 @@ public class TaskTrackerListener implements Runnable {
 		while (true) {
 			try {
 				Socket connectionSocket = listenerSocket.accept();
-				System.out.println("Listener: accepted connection from " 
-						+ connectionSocket.getInetAddress() + ":" 
-						+ connectionSocket.getPort());
+				//System.out.println("Listener: accepted connection from " 
+				//		+ connectionSocket.getInetAddress() + ":" 
+				//		+ connectionSocket.getPort());
 				ObjectInputStream inStream = new ObjectInputStream(connectionSocket.getInputStream());
 				ObjectOutputStream outStream = new ObjectOutputStream(connectionSocket.getOutputStream());
 				//Receive the object describing the map output path
 				OutputPath mapOutputPath = (OutputPath)inStream.readObject();
 				File folder = new File(TaskTracker.getInstance().getMapOutputDir());
-				System.out.println("Listener: reading " + folder.getAbsolutePath());
+				//System.out.println("Listener: reading " + folder.getAbsolutePath());
 				File[] filesArray = folder.listFiles();
 				List<File> listOfFiles = new ArrayList<File>();
 				String prefix = "map" + mapOutputPath.getJob().getJobId();
@@ -54,7 +54,7 @@ public class TaskTrackerListener implements Runnable {
 				for (File file : filesArray) {
 					String fileName = file.getName();
 					if (fileName.startsWith(prefix) && fileName.endsWith(suffix)) {
-						System.out.println("Listen: File found: " + file.getAbsolutePath());
+						//System.out.println("Listen: File found: " + file.getAbsolutePath());
 						listOfFiles.add(file);
 					}
 				}
@@ -63,7 +63,7 @@ public class TaskTrackerListener implements Runnable {
 				//Send the file count
 				outStream.writeInt(fileCount);
 				outStream.flush();
-				System.out.println("Listener: files " + listOfFiles);
+				//System.out.println("Listener: files " + listOfFiles);
 				
 				for (int i = 0; i < listOfFiles.size(); i++) {
 					//Send the file size

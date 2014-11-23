@@ -52,9 +52,6 @@ public class Client {
 			e.printStackTrace();
 		}
 		
-		
-		
-		
 		Scanner scanner = new Scanner(System.in);
 		String command = null;
 		
@@ -119,7 +116,7 @@ public class Client {
 		try {
 			DfsFileWriter writer = new DfsFileWriter(address, port);
 			if (writer.write(localPath, dfsPath) == true) {
-				System.out.println(localPath + "has been put to " + dfsPath);
+				System.out.println(localPath + " has been put to " + dfsPath);
 			}
 			else {
 				System.out.println("fail to write " + localPath + " to " + dfsPath);

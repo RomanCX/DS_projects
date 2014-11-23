@@ -87,7 +87,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			datanodeCount++;
 			returnValue = new DnRegistration((datanodeCount - 1), DEFAULT_HEARTBEAT_INTERVAL);
 		}
-		System.out.println("Datanode Registered: " + (datanodeCount - 1));
+		//System.out.println("Datanode Registered: " + (datanodeCount - 1));
 		return returnValue;
 	}
 	
@@ -181,7 +181,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			for (int blockId : fileBlocks) {
 				List<Integer> datanodesContainingBlock = blocks.get(blockId);
 				DatanodeInfo selectedDataNode = selectDatanode(address, datanodesContainingBlock);
-				System.out.println("Read: block " + blockId + " from datanode " + selectedDataNode.getId());
+				//System.out.println("Read: block " + blockId + " from datanode " + selectedDataNode.getId());
 				returnValue.put(blockId, selectedDataNode);
 			}
 			rwLock.readLock().unlock();
@@ -209,7 +209,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				}
 			}
 		}
-		System.out.println("Seleted datanode: " + selectedDatanode.getId());
+		//System.out.println("Seleted datanode: " + selectedDatanode.getId());
 		return selectedDatanode;
 	}
 
@@ -231,7 +231,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				for (int j = 0; j < replicaFactor; j++) {
 					fileBlocks.add(blockCount);
 					int selectedDatanodeId = availableDatanodesPerm.get(j);
-					System.out.println("Write block " + blockCount + " to datanode " + selectedDatanodeId);
+					//System.out.println("Write block " + blockCount + " to datanode " + selectedDatanodeId);
 					datanodesForBlock.add(datanodes.get(selectedDatanodeId));
 					datanodeBlocks.get(selectedDatanodeId).add(blockCount);
 					datanodeIdsForBlock.add(selectedDatanodeId);
@@ -312,7 +312,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 					DatanodeInfo datanode = datanodes.get(datanodeIdContainingBlock);
 					if (datanode.isAlive()) {
 						datanodesContainingBlock.add(datanode);
-						System.out.println("getFileBlocks: block " + blockId + " from datanode " + datanodeIdContainingBlock);
+						//System.out.println("getFileBlocks: block " + blockId + " from datanode " + datanodeIdContainingBlock);
 					}
 				}
 				returnValue.put(blockId, datanodesContainingBlock);

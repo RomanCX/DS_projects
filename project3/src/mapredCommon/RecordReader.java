@@ -34,7 +34,6 @@ public class RecordReader {
 		}
 		this.delim = delim;
 		this.idx = 0;
-		System.out.println(tokens);
 	}
 	
 	public boolean hasNext() {

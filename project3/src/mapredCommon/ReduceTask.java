@@ -77,7 +77,7 @@ public class ReduceTask extends Task {
 	}
 	@Override
 	public void run() {
-		System.out.println("Reduce task " + taskId + " started");
+		//System.out.println("Reduce task " + taskId + " started");
 		try {
 			initFiles();
 			fetchFiles();
@@ -135,7 +135,7 @@ public class ReduceTask extends Task {
 	}
 	
 	private void fetchFiles() {
-		System.out.println("Fetching files");
+		//System.out.println("Fetching files");
 		try {
 
 			for (int i = 0; i < taskTrackers.size(); i++) {
@@ -214,10 +214,10 @@ public class ReduceTask extends Task {
 				return o1.key.compareTo(o2.key);
 			}
 		};
-		System.out.println("Sorting files");
+		//System.out.println("Sorting files");
 		List<BufferedReader> readers = new ArrayList<BufferedReader>();
 		for (int i = 0; i < mapOutFiles.size(); i++) {
-			System.out.println("File: " + mapOutFiles.get(i).getAbsolutePath());
+			//System.out.println("File: " + mapOutFiles.get(i).getAbsolutePath());
 			readers.add(new BufferedReader(new FileReader(mapOutFiles.get(i))));
 		}
 		BufferedWriter writer = new BufferedWriter(new FileWriter(sortedFile));
@@ -243,7 +243,7 @@ public class ReduceTask extends Task {
 		try {
 			BufferedReader reader = readers.get(index);
 			String line = reader.readLine();
-			System.out.println("Read line " + line);
+			//System.out.println("Read line " + line);
 			if (line == null) {
 				return;
 			}
@@ -267,7 +267,7 @@ public class ReduceTask extends Task {
 		ValueEntry entry = pq.poll();
 		String key = entry.key;
 		try {
-			System.out.println("Write line" + key + job.getDelim() + entry.value);
+			//System.out.println("Write line" + key + job.getDelim() + entry.value);
 			writer.write(key);
 			writer.write(job.getDelim());
 			writer.write(entry.value);
@@ -283,7 +283,7 @@ public class ReduceTask extends Task {
 	 * Upload the local reduce output file to HDFS
 	 */
 	private void uploadOutput() throws Exception  {
-		System.out.println("Uploading output to HDFS");
+		//System.out.println("Uploading output to HDFS");
 		String jobTrackerAddress = TaskTracker.getInstance().getJobTrackerAddress();
 		DfsFileWriter writer = new DfsFileWriter(jobTrackerAddress, namenodePort);
 		if (writer.write(reduceOutputTmpFile.getAbsolutePath(), (job.getOutputPath() + "part" + taskId)) == false) {

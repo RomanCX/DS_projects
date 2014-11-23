@@ -233,12 +233,12 @@ public class JobTracker implements JobTrackerProtocol {
 		JobProgress progress = new JobProgress(mapTasks.size(), reduceTasksNum,
 											mapTasks.size(), reduceTasksNum);
 		jobProgresses.put(currentJob.getJobId(), progress);
-		System.out.println("JobProgress is " + jobProgresses);
+		//System.out.println("JobProgress is " + jobProgresses);
 	}
 	
 	/* Generate reduce tasks for current job */
 	private void generateReduceTasks() {
-		System.out.println("number of reduceTasks: " + currentJob.getNumReduceTasks());
+		//System.out.println("number of reduceTasks: " + currentJob.getNumReduceTasks());
 		for (int i = 0; i < currentJob.getNumReduceTasks(); ++i) {
 			/*
 			 * When taskTracker changes in case of failure, the actual object
@@ -248,7 +248,7 @@ public class JobTracker implements JobTrackerProtocol {
 			reduceTasksToBeRan.add(i);
 			blacklistOfReduce.add(new HashSet<Integer>());
 		}
-		System.out.println("reduceTasksToBeRan" + reduceTasksToBeRan);
+		//System.out.println("reduceTasksToBeRan" + reduceTasksToBeRan);
 	}
 	
 	/* Select an appropriate map task for this taskTracker */
@@ -256,7 +256,7 @@ public class JobTracker implements JobTrackerProtocol {
 		String address = trackerIdToTracker.get(taskTrackerId).getAddress();
 		Set<Integer> taskIds = dnToMapTaskIds.get(address);
 		MapTask mapTask = null;
-		System.out.println("tasktracker address is " + address);
+		//System.out.println("tasktracker address is " + address);
 		// find a map task whose input file is in this task tracker
 		if (taskIds != null && taskIds.size() > 0) {
 			Iterator<Integer> iter = taskIds.iterator();
@@ -351,12 +351,12 @@ public class JobTracker implements JobTrackerProtocol {
 		 * and get new job
 		 * 
 		 */
-		System.out.println("finished tasks" + finishedTasks);
+		//System.out.println("finished tasks" + finishedTasks);
 		Set<Integer> runningTaskIds = trackerIdToRunningTaskIds.get(taskTrackerId);
 		Set<Integer> completedTaskIds = trackerIdToCompletedMapTaskIds.get(taskTrackerId);
-		System.out.println("completed tasks " + completedTaskIds);
+		//System.out.println("completed tasks " + completedTaskIds);
 		
-		System.out.println("job id " + currentJob.getJobId());
+		//System.out.println("job id " + currentJob.getJobId());
 		// get the job progress
 		JobProgress progress = jobProgresses.get(currentJob.getJobId());
 		int mapTasksLeft = progress.getMapTasksLeft();
@@ -422,8 +422,8 @@ public class JobTracker implements JobTrackerProtocol {
 			return new HeartBeatResponse(new ArrayList<Task>(),
 									TaskTrackerOperation.RUN_TASK);
 		
-		System.out.println("numSlots: " + numSlots);
-		System.out.println("mapTasksLeft in heartbeat: " + progress.getMapTasksLeft());
+		//System.out.println("numSlots: " + numSlots);
+		//System.out.println("mapTasksLeft in heartbeat: " + progress.getMapTasksLeft());
 		List<Task> tasksToBeAssigned = new ArrayList<Task>();
 		while (numSlots > 0) {
 			Task task = null;

@@ -102,7 +102,7 @@ public class TaskTracker {
 			jobTrackerAddress = fsName.substring(0, posColon);
 			jobTrackerPort = Integer.parseInt(pro.getProperty("jobtracker.port"));
 			
-			System.out.println("Master address: " + fsName + ":" + jobTrackerPort);
+			//System.out.println("Master address: " + fsName + ":" + jobTrackerPort);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -162,7 +162,7 @@ public class TaskTracker {
 	
 	public void reportFinished(int taskId) {
 		synchronized (finishedTasks) {
-			System.out.println("Task " + taskId + " finished.");
+			//System.out.println("Task " + taskId + " finished.");
 			runningTasks.remove(taskId);
 			finishedTasks.add(taskId);
 		}

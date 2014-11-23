@@ -122,7 +122,7 @@ public class JobClient {
 				if (currentMapProgress == lastMapProgress &&
 						currentReduceProgress == lastReduceProgress)
 					continue;
-				System.out.print("map task: " + currentMapProgress + "%");
+				System.out.print("map task: " + currentMapProgress + "% ");
 				System.out.println("reduce task: " + currentReduceProgress + "%");
 				if (progress.isFinished()) {
 					System.out.println("job finished");
