@@ -93,7 +93,6 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	
 	@Override
 	public List<Command> heartBeat(int nodeId, Map<Integer, String> blocks) {
-		System.out.println("Heartbeat from datanode " + nodeId);
 		
 		if (System.currentTimeMillis() - lastWriteToDiskTime >= DEFAULT_WRITE_TO_DISK_INTERVAL) {
 			writeToDisk();
@@ -114,10 +113,12 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	    } else {
 	    	commands.remove(((Integer)nodeId));
 	    }
-	    if (toShutDown) {
-	    	returnValue.add(new Command(Operation.SHUT_DOWN, -1));
-	    	availableDatanodes.remove(nodeId);
-	    	datanodes.get(nodeId).setStatus(DatanodeStatus.SHUT_DOWN);
+	    synchronized (toShutDown) {
+		    if (toShutDown) {
+		    	returnValue.add(new Command(Operation.SHUT_DOWN, -1));
+		    	availableDatanodes.remove(nodeId);
+		    	datanodes.get(nodeId).setStatus(DatanodeStatus.SHUT_DOWN);
+		    }
 	    }
 	    return returnValue;
 	}
@@ -347,8 +348,21 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			}
 		}
 		datanodes.clear();
+		toShutDown = false;
 		writeToDisk();
-		System.exit(0);	
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					System.out.println("System going to shut down in 5 seconds");
+					Thread.sleep(5000);
+				} catch (InterruptedException e) {
+					//Do nothing
+				}
+				System.exit(0);
+			}
+		}).start();
 	}
 
 }

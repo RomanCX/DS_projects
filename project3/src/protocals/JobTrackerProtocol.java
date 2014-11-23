@@ -13,4 +13,5 @@ public interface JobTrackerProtocol extends Remote {
 			List<Integer> failedTasks, int numSlots, int taskTrackerId) throws RemoteException;
 	public int submitJob(Job job) throws RemoteException;
 	public JobProgress checkProgress(int jobId) throws RemoteException;
+	public void shutdown() throws RemoteException;
 }
