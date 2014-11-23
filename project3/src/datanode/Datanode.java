@@ -22,10 +22,10 @@ import java.util.Map;
 import java.util.Properties;
 
 import namenode.DatanodeInfo;
-import protocals.Command;
-import protocals.NamenodeProtocal;
-import protocals.DnRegistration;
-import protocals.Operation;
+import protocols.Command;
+import protocols.DnRegistration;
+import protocols.NamenodeProtocol;
+import protocols.DatanodeOperation;
 
 public class Datanode implements Runnable {
 	
@@ -48,7 +48,7 @@ public class Datanode implements Runnable {
 	// interval of hearbeat;
 	private long heartBeatInterval; 
 	// a remote object contains methods used to communicate with namenode
-	private NamenodeProtocal namenode; 
+	private NamenodeProtocol namenode; 
 	// indicate if datanode should stop running
 	private boolean stop;
 	// path for datanode image
@@ -82,9 +82,9 @@ public class Datanode implements Runnable {
 			e.printStackTrace();
 		}
 		
-		System.out.println(namenodeAddr);
-		System.out.println(namenodePort);
-		System.out.println(dataDir);
+		//System.out.println(namenodeAddr);
+		//System.out.println(namenodePort);
+		//System.out.println(dataDir);
 	}
 	
 	/* Start datanode */
@@ -98,8 +98,8 @@ public class Datanode implements Runnable {
 			tmp.close();
 			
 			// register datanode on namenode 
-			Registry registry = LocateRegistry.getRegistry(namenodeAddr);
-			namenode = (NamenodeProtocal)registry.lookup("namenode");
+			Registry registry = LocateRegistry.getRegistry(namenodeAddr, namenodePort);
+			namenode = (NamenodeProtocol)registry.lookup("namenode");
 			myAddr = InetAddress.getLocalHost().getHostAddress();
 			DnRegistration dr = namenode.register(myAddr, myPort);
 			nodeId = dr.getNodeId();
@@ -136,7 +136,7 @@ public class Datanode implements Runnable {
 		do {
 			lastBeat = System.currentTimeMillis();
 			try {
-				System.out.println("heart beat");
+				//System.out.println("heart beat");
 				commands = namenode.heartBeat(nodeId, blockMap);
 			} catch (RemoteException e) {
 				continue;
@@ -145,15 +145,15 @@ public class Datanode implements Runnable {
 			for (Command command : commands) {
 				switch (command.operation) {
 				case FETCH_DATA:
-					System.out.println("fetch data");
+					//System.out.println("fetch data");
 					fetchData(command.getBlockId(), command.getTarget());
 					break;
 				case DELETE_DATA:
-					System.out.println("delete data");
+					//System.out.println("delete data");
 					deleteData(command.getBlockId());
 					break;
 				case SHUT_DOWN:
-					System.out.println("shut down");
+					//System.out.println("shut down");
 					shutDown();
 					break;
 				default:
@@ -193,14 +193,16 @@ public class Datanode implements Runnable {
 			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
 				
-			oos.writeObject(new Command(Operation.READ_DATA, blockId, null));
+			oos.writeObject(new Command(DatanodeOperation.READ_DATA, blockId, null));
 			Block block = (Block)ois.readObject();
 				
 			// write the block got from other datanode to local disk
 			// and update the map of block to filename
 			String fileName = dataDir + "/block" + block.getId();
 			writeBlock(fileName, block.getData());
-			blockMap.put(block.getId(), fileName);
+			synchronized(blockMap) {
+				blockMap.put(block.getId(), fileName);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -208,17 +210,21 @@ public class Datanode implements Runnable {
 	
 	/* Delete blocks in this datanode */
 	private void deleteData(int blockId) {
-		File f = new File(blockMap.get(blockId));
-		// To do: need lock
-		f.delete();
-		blockMap.remove(blockId);
+		synchronized(blockMap) {
+			File f = new File(blockMap.get(blockId));
+			// To do: need lock
+			f.delete();
+			blockMap.remove(blockId);
+		}
 	}
 	
 	/* Send block to client or other datanode */
 	private void transferData(ObjectOutputStream oos, int blockId) {
 		// read block from local file
-		//To do, may need lock
-		File f = new File(blockMap.get(blockId));
+		File f = null;
+		synchronized(blockMap) {
+			f = new File(blockMap.get(blockId));
+		}
 		StringBuilder sb = new StringBuilder();
 			
 		try (BufferedReader br = new BufferedReader(new FileReader(f))) {
@@ -240,8 +246,9 @@ public class Datanode implements Runnable {
 			Block block = (Block)ois.readObject();
 			String fileName = dataDir + "/block" + block.getId();
 			writeBlock(fileName, block.getData());
-			// To do, may need lock
-			blockMap.put(block.getId(), fileName);
+			synchronized(blockMap) {
+				blockMap.put(block.getId(), fileName);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			return false;
@@ -257,7 +264,9 @@ public class Datanode implements Runnable {
 		stop = true;
 		try (ObjectOutputStream oos = new ObjectOutputStream(
 						new FileOutputStream(new File(imageFile)))) {
-			oos.writeObject(blockMap);
+			synchronized(blockMap) {
+				oos.writeObject(blockMap);
+			}
 			oos.flush();
 			System.exit(0);
 		} catch (Exception e) {

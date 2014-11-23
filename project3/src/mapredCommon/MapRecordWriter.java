@@ -17,11 +17,23 @@ import java.util.TreeMap;
 
 import tasktracker.TaskTracker;
 
+/**
+ * MapRecordWriter is a facility to write the output of map task to local disk
+ * @author RomanC
+ *
+ */
 public class MapRecordWriter implements RecordWriter {
 	private Job job;
 	private List<BufferedWriter> outWriters;
 	private TreeMap<String, List<String>> outResult;
 	
+	/**
+	 * Constructor
+	 * @param job currently executing job
+	 * @param taskId id of map task
+	 * @param outputDir directory to save map task's output
+	 * @throws IOException
+	 */
 	public MapRecordWriter(Job job, int taskId, String outputDir) throws IOException {
 		this.job = job;
 		this.outWriters = new ArrayList<BufferedWriter>();
@@ -38,6 +50,7 @@ public class MapRecordWriter implements RecordWriter {
 
 	}
 	
+	
 	@Override
 	public void write(String key, String value) throws IOException {
 		List<String> values = outResult.get(key);
@@ -48,6 +61,10 @@ public class MapRecordWriter implements RecordWriter {
 		values.add(value);
 	}
 	
+	/**
+	 * flush all the buffered records to local disk
+	 * @throws IOException
+	 */
 	public void writeAll() throws IOException {
 		for (Entry<String, List<String>> entry: outResult.entrySet()) {
 			String key = entry.getKey();

@@ -26,13 +26,13 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import protocals.Command;
-import protocals.NamenodeProtocal;
-import protocals.DnRegistration;
-import protocals.Operation;
+import protocols.Command;
+import protocols.DnRegistration;
+import protocols.NamenodeProtocol;
+import protocols.DatanodeOperation;
 
 
-public class Namenode implements NamenodeProtocal, Serializable {
+public class Namenode implements NamenodeProtocol, Serializable {
 	//Set of alive data node ids
 	private HashSet<Integer> availableDatanodes;
 	//Map between data node id to DatanodeInfo instances
@@ -61,6 +61,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	private Boolean toShutDown = false;
 	//image path configurable by config file
 	private String imagePath;
+	private int numNotificationsPending;
 	
 	public static final int DEFAULT_HEARTBEAT_INTERVAL = 3000;//ms
 	public static final int DEFAULT_WRITE_TO_DISK_INTERVAL = 10000;//ms
@@ -100,7 +101,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			datanodeCount++;
 			returnValue = new DnRegistration((datanodeCount - 1), DEFAULT_HEARTBEAT_INTERVAL);
 		}
-		System.out.println("Datanode Registered: " + (datanodeCount - 1));
+		//System.out.println("Datanode Registered: " + (datanodeCount - 1));
 		return returnValue;
 	}
 	
@@ -112,6 +113,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			lastWriteToDiskTime = System.currentTimeMillis();
 		}
 		datanodes.get(nodeId).heartBeat();
+		availableDatanodes.add(nodeId);
 	    Iterator<Entry<Integer, DatanodeInfo>> it = datanodes.entrySet().iterator();
 	    while (it.hasNext()) {
 	        Entry<Integer, DatanodeInfo> pairs = it.next();
@@ -128,9 +130,8 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	    }
 	    synchronized (toShutDown) {
 		    if (toShutDown) {
-		    	returnValue.add(new Command(Operation.SHUT_DOWN, -1));
-		    	availableDatanodes.remove(nodeId);
-		    	datanodes.get(nodeId).setStatus(DatanodeStatus.SHUT_DOWN);
+		    	returnValue.add(new Command(DatanodeOperation.SHUT_DOWN, -1));
+		    	numNotificationsPending--;
 		    }
 	    }
 	    return returnValue;
@@ -160,7 +161,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			namenode = new Namenode();
 		}
 		namenode.readConfigFile();
-		NamenodeProtocal namenodeStub = (NamenodeProtocal)UnicastRemoteObject.exportObject(namenode, 0);
+		NamenodeProtocol namenodeStub = (NamenodeProtocol)UnicastRemoteObject.exportObject(namenode, 0);
 		Registry registry = LocateRegistry.createRegistry(port);
 		registry.rebind(NAMENODE_RMI_NAME, namenodeStub);
 	}
@@ -194,7 +195,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			for (int blockId : fileBlocks) {
 				List<Integer> datanodesContainingBlock = blocks.get(blockId);
 				DatanodeInfo selectedDataNode = selectDatanode(address, datanodesContainingBlock);
-				System.out.println("Read: block " + blockId + " from datanode " + selectedDataNode.getId());
+				//System.out.println("Read: block " + blockId + " from datanode " + selectedDataNode.getId());
 				returnValue.put(blockId, selectedDataNode);
 			}
 			rwLock.readLock().unlock();
@@ -222,7 +223,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				}
 			}
 		}
-		System.out.println("Seleted datanode: " + selectedDatanode.getId());
+		//System.out.println("Seleted datanode: " + selectedDatanode.getId());
 		return selectedDatanode;
 	}
 
@@ -244,7 +245,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 				for (int j = 0; j < replicaFactor; j++) {
 					fileBlocks.add(blockCount);
 					int selectedDatanodeId = availableDatanodesPerm.get(j);
-					System.out.println("Write block " + blockCount + " to datanode " + selectedDatanodeId);
+					//System.out.println("Write block " + blockCount + " to datanode " + selectedDatanodeId);
 					datanodesForBlock.add(datanodes.get(selectedDatanodeId));
 					datanodeBlocks.get(selectedDatanodeId).add(blockCount);
 					datanodeIdsForBlock.add(selectedDatanodeId);
@@ -289,7 +290,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 					commandsForDatanode = new ArrayList<Command>();
 					commands.put(datanodeId, commandsForDatanode);
 				}
-				commandsForDatanode.add(new Command(Operation.DELETE_DATA, blockId));
+				commandsForDatanode.add(new Command(DatanodeOperation.DELETE_DATA, blockId));
 				datanodeBlocks.get(datanodeId).remove(((Integer)blockId));
 				System.out.println("Delete: block " + blockId + " on datanode " + datanodeId);
 			}
@@ -325,7 +326,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 					DatanodeInfo datanode = datanodes.get(datanodeIdContainingBlock);
 					if (datanode.isAlive()) {
 						datanodesContainingBlock.add(datanode);
-						System.out.println("getFileBlocks: block " + blockId + " from datanode " + datanodeIdContainingBlock);
+						//System.out.println("getFileBlocks: block " + blockId + " from datanode " + datanodeIdContainingBlock);
 					}
 				}
 				returnValue.put(blockId, datanodesContainingBlock);
@@ -352,15 +353,15 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	public void shutDown() {
 		synchronized (toShutDown) {
 			toShutDown = true;
+			numNotificationsPending = availableDatanodes.size();
 		}
-		while (availableDatanodes.size() != 0) {
+		while (numNotificationsPending != 0) {
 			try {
 				Thread.sleep(DEFAULT_HEARTBEAT_INTERVAL);
 			} catch (InterruptedException e) {
 				//Do nothing
 			}
 		}
-		datanodes.clear();
 		toShutDown = false;
 		writeToDisk();
 		new Thread(new Runnable() {

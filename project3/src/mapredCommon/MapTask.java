@@ -32,7 +32,6 @@ public class MapTask extends Task {
 	
 	@Override
 	public void run() {
-		System.out.println("Map task " + taskId + " started.");
 		RecordReader reader;
 		try {
 			reader = new RecordReader(blockId, datanode, job.getDelim());
@@ -46,7 +45,6 @@ public class MapTask extends Task {
 			TaskTracker.getInstance().reportFinished(taskId);
 			writer.writeAll();
 		} catch (Exception e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 			TaskTracker.getInstance().reportFailed(taskId);
 		}

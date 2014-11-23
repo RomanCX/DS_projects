@@ -1,5 +1,5 @@
-jobtracker.port=2099
+jobtracker.port=6889
 tasktracker.tasks.maximum=2
 tasktracker.heartbeat.interval=3000
 mapred.tmp.dir=tmp/mapred/
-fs.default.name=localhost:1099
+fs.default.name=localhost:6889

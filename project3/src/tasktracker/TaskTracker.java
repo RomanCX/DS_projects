@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.jar.JarFile;
 
-import protocals.HeartBeatResponse;
-import protocals.JobTrackerProtocol;
-import protocals.TaskTrackerOperation;
-import protocals.TkRegistration;
+import protocols.HeartBeatResponse;
+import protocols.JobTrackerProtocol;
+import protocols.TaskTrackerOperation;
+import protocols.TkRegistration;
 import mapredCommon.MapTask;
 import mapredCommon.Task;
 
@@ -102,7 +102,7 @@ public class TaskTracker {
 			jobTrackerAddress = fsName.substring(0, posColon);
 			jobTrackerPort = Integer.parseInt(pro.getProperty("jobtracker.port"));
 			
-			System.out.println("Master address: " + fsName + ":" + jobTrackerPort);
+			//System.out.println("Master address: " + fsName + ":" + jobTrackerPort);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -162,7 +162,7 @@ public class TaskTracker {
 	
 	public void reportFinished(int taskId) {
 		synchronized (finishedTasks) {
-			System.out.println("Task " + taskId + " finished.");
+			//System.out.println("Task " + taskId + " finished.");
 			runningTasks.remove(taskId);
 			finishedTasks.add(taskId);
 		}

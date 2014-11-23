@@ -1,4 +1,4 @@
-package protocals;
+package protocols;
 
 import java.io.Serializable;
 import java.util.List;

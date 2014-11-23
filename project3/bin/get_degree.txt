@@ -1,0 +1,3 @@
+get /output-degree/part0 degree-output-0.txt
+get /output-degree/part1 degree-output-1.txt
+quit

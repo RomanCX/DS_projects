@@ -15,8 +15,13 @@ import java.util.jar.JarFile;
 
 import jobtracker.JobProgress;
 import mapredCommon.Job;
-import protocals.JobTrackerProtocol;
+import protocols.JobTrackerProtocol;
 
+/**
+ * Client program used to submit job to MapReduce system
+ * @author RomanC
+ *
+ */
 public class JobClient {
 	private static final String mapredCnf = "../conf/mapred.cnf";
 	private static final String dfsCnf = "../conf/dfs.cnf";
@@ -41,6 +46,10 @@ public class JobClient {
 		runJob(job);
 	}
 	
+	/**
+	 * Initialize client program  
+	 * @return true if the initialization succeeds <p> false otherwise
+	 */
 	public static boolean init() {
 		Properties pro = new Properties();
 		try {
@@ -62,12 +71,18 @@ public class JobClient {
 		return true;
 	}
 	
+	/**
+	 * Initialize a job with user specified settings
+	 * @param args settings for the job
+	 * @return prepared job which can be submitted to MapReduce system
+	 */
 	public static Job initJob(String[] args) {
 		String input = null;
 		String output = null;
 		String jarFile = null;
 		String delim = "\t";
 		int numReduceTasks = 0;
+		Job job = new Job();
 		
 		for (int i = 0; i < args.length; ++i) {
 			if (args[i].equals("-input")) {
@@ -103,10 +118,20 @@ public class JobClient {
 				System.exit(1);
 			}
 		}
-		
-		return new Job(input, output, jarFile, delim, numReduceTasks);
+		job.setInputPath(input);
+		job.setOutputPath(output);
+		job.setJarFile(jarFile);
+		job.setDelim(delim);
+		job.setNumReduceTasks(numReduceTasks);
+		return job;
 	}
 	
+	/**
+	 * Submit the job to MapReduce system and wait for its completion.
+	 * <p> The progress of job will be reported periodically
+	 * @param job job to be run
+	 * @throws RemoteException
+	 */
 	public static void runJob(Job job) throws RemoteException {
 		int jobId;
 		if ((jobId = jobTracker.submitJob(job)) > 0) {
@@ -122,7 +147,7 @@ public class JobClient {
 				if (currentMapProgress == lastMapProgress &&
 						currentReduceProgress == lastReduceProgress)
 					continue;
-				System.out.print("map task: " + currentMapProgress + "%");
+				System.out.print("map task: " + currentMapProgress + "% ");
 				System.out.println("reduce task: " + currentReduceProgress + "%");
 				if (progress.isFinished()) {
 					System.out.println("job finished");

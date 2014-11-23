@@ -1,5 +1,6 @@
 package dfsClient;
 
+import java.io.FileReader;
 import java.net.InetAddress;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -8,16 +9,18 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 
 import namenode.DatanodeInfo;
 import datanode.Block;
-import protocals.Command;
-import protocals.NamenodeProtocal;
-import protocals.Operation;
+import protocols.Command;
+import protocols.NamenodeProtocol;
+import protocols.DatanodeOperation;
 
 public class Client {
+	private static final String cnfFile = "../conf/dfs.cnf";
 	private static final String prompt = ">>";
 	// address of namenode
 	private static String address;
@@ -25,7 +28,7 @@ public class Client {
 	private static int port;
 	// address of client
 	private static String myAddress;
-	private static NamenodeProtocal namenode;
+	private static NamenodeProtocol namenode;
 	
 	
 	/*
@@ -36,24 +39,11 @@ public class Client {
 	 *  (4) delete dfs://path
 	 */
 	public static void main(String[] args) {
-		if (args.length < 2) {
-			System.out.println("Usage: <namenode address> <namenode port>");
-			System.exit(1);
+		
+		if (init() == false) {
+			System.out.println("fail to start client");
+			return;
 		}
-		
-		address = args[0];
-		port = Integer.parseInt(args[1]);
-		
-		try {
-			myAddress = InetAddress.getLocalHost().getHostName();
-			Registry registry = LocateRegistry.getRegistry(address, port);
-			namenode = (NamenodeProtocal)registry.lookup("namenode");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		
-		
 		
 		Scanner scanner = new Scanner(System.in);
 		String command = null;
@@ -101,6 +91,25 @@ public class Client {
 		}
 	}
 	
+	private static boolean init() {
+		try {
+			Properties pro = new Properties();
+			pro.load(new FileReader(cnfFile));
+			String name = pro.getProperty("fs.default.name");
+			int pos1 = name.indexOf("//");
+			int pos2 = name.indexOf(":", pos1 + 2);
+			address = name.substring(pos1 + 2, pos2);
+			port = Integer.parseInt(name.substring(pos2 + 1));
+			myAddress = InetAddress.getLocalHost().getHostName();
+			Registry registry = LocateRegistry.getRegistry(address, port);
+			namenode = (NamenodeProtocol)registry.lookup("namenode");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+	
 	private static void executeGet(String dfsPath, String localPath) {
 		try {
 			DfsFileReader reader = new DfsFileReader(address, port);
@@ -119,7 +128,7 @@ public class Client {
 		try {
 			DfsFileWriter writer = new DfsFileWriter(address, port);
 			if (writer.write(localPath, dfsPath) == true) {
-				System.out.println(localPath + "has been put to " + dfsPath);
+				System.out.println(localPath + " has been put to " + dfsPath);
 			}
 			else {
 				System.out.println("fail to write " + localPath + " to " + dfsPath);
