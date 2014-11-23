@@ -75,6 +75,8 @@ public class Datanode implements Runnable {
 			int length = dataDir.length();
 			if (length > 1 && dataDir.charAt(length - 1) == '/')
 				dataDir = dataDir.substring(0, length - 1);
+			File f = new File(dataDir);
+			f.mkdirs();
 			
 		} catch(Exception e) {
 			e.printStackTrace();

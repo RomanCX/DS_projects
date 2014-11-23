@@ -1,5 +1,6 @@
 package tasktracker;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -188,6 +189,8 @@ public class TaskTracker {
 		if (tmpDir.endsWith("/")) {
 			mapOutputDir = tmpDir.substring(0, tmpDir.length() - 1);
 		}
+		File dir = new File(tmpDir);
+		dir.mkdirs();
 		
 	}
 	

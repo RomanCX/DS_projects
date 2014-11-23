@@ -1,4 +1,5 @@
 package namenode;
+import java.awt.image.ImageFilter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -46,15 +47,17 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	private int replicaFactor;
 	private String namenodeImageFilename;
 	private Boolean toShutDown = false;
+	private String imagePath;
 	
 	public static final int DEFAULT_HEARTBEAT_INTERVAL = 3000;//ms
 	public static final int DEFAULT_WRITE_TO_DISK_INTERVAL = 10000;//ms
 	public static final int DEFAULT_REPLICA_FACTOR = 3;
 	public static final String NAMENODE_RMI_NAME = "namenode";
-	public static final String DEFAULT_NAMENODE_IMAGE_FILENAME = "namenode_image";
+	public static final String DEFAULT_IMAGE_PATH = "tmp/dfs/name/";
 	public static final int DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
 	public static final int DEFAULT_REGISTRY_PORT = 1099;
 	public static final String CONFIG_FILE_NAME = "../conf/dfs.cnf";
+	public static final String IMAGE_FILE_NAME = "name.image";
 	
 	
 	public Namenode() {
@@ -69,7 +72,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 		lastWriteToDiskTime = System.currentTimeMillis();
 		blockSize = DEFAULT_BLOCK_SIZE;
 		replicaFactor = DEFAULT_REPLICA_FACTOR;
-		namenodeImageFilename = DEFAULT_NAMENODE_IMAGE_FILENAME;
+		imagePath = DEFAULT_IMAGE_PATH;
 	}
 	
 	
@@ -127,11 +130,14 @@ public class Namenode implements NamenodeProtocal, Serializable {
 		} catch(Exception e) {
 			System.err.println("Failed to read config file");
 		}
-		String imageFilename = pro.getProperty("dfs.name.dir", DEFAULT_NAMENODE_IMAGE_FILENAME);
+		String imageDir = pro.getProperty("dfs.name.dir", DEFAULT_IMAGE_PATH);
 		String addressPort = pro.getProperty("fs.default.name", "localhost:" + Integer.toString(DEFAULT_REGISTRY_PORT));
 		int port = Integer.parseInt(addressPort.substring(addressPort.indexOf(':') + 1));
 		Namenode namenode;
-		File f = new File(imageFilename);
+		if (!imageDir.endsWith("/")) {
+			imageDir += '/';
+		}
+		File f = new File(imageDir + IMAGE_FILE_NAME);
 		if (f.exists()) {
 			ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f));
 			namenode = (Namenode)ois.readObject();
@@ -146,7 +152,12 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	}
 
 	private void writeToDisk() {
-		File f = new File(namenodeImageFilename);
+		if (!imagePath.endsWith("/")) {
+			imagePath += "/";
+		}
+		File dir = new File(imagePath);
+		dir.mkdirs();
+		File f = new File(imagePath + IMAGE_FILE_NAME);
 		try {
 			ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(f));
 			oos.writeObject(this);
@@ -249,7 +260,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 		blockSize = Integer.parseInt(pro.getProperty("dfs.block.size", 
 				Integer.toString(DEFAULT_BLOCK_SIZE)));
 		replicaFactor = Integer.parseInt(pro.getProperty("dfs.replication", Integer.toString(DEFAULT_REPLICA_FACTOR)));
-		namenodeImageFilename = pro.getProperty("dfs.name.dir", DEFAULT_NAMENODE_IMAGE_FILENAME);
+		imagePath = pro.getProperty("dfs.name.dir", DEFAULT_IMAGE_PATH);
 	}
 
 
