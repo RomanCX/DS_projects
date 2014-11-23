@@ -323,9 +323,11 @@ public class JobTracker implements JobTrackerProtocol {
 	@Override
 	public synchronized HeartBeatResponse heartBeat(List<Integer> finishedTasks, 
 		List<Integer> failedTasks, int numSlots, int taskTrackerId) throws RemoteException {
-		/* update the lastHeartBeatTime of this tasktracker */
-		trackerIdToTracker.get(taskTrackerId).
-								updateHeartBeatTime(System.currentTimeMillis());
+		synchronized(trackerIdToTracker) {
+			/* update the lastHeartBeatTime of this tasktracker */
+			trackerIdToTracker.get(taskTrackerId).
+									updateHeartBeatTime(System.currentTimeMillis());
+		}
 		
 		if (currentJob == null)
 			return new HeartBeatResponse(new ArrayList<Task>());
@@ -407,6 +409,8 @@ public class JobTracker implements JobTrackerProtocol {
 		if (numSlots == 0 || currentJob == null)
 			return new HeartBeatResponse(new ArrayList<Task>());
 		
+		System.out.println("numSlots: " + numSlots);
+		System.out.println("mapTasksLeft in heartbeat: " + progress.getMapTasksLeft());
 		List<Task> tasksToBeAssigned = new ArrayList<Task>();
 		while (numSlots > 0) {
 			Task task = null;
@@ -428,29 +432,39 @@ public class JobTracker implements JobTrackerProtocol {
 		return jobProgresses.get(jobId);
 	}
 	
-	public void removeFailedTracker(int taskTrackerId) {
-		JobProgress progress = jobProgresses.get(currentJob.getJobId());
-		int mapTasksLeft = progress.getMapTasksLeft();
-		int reduceTasksLeft = progress.getReduceTasksLeft();
-		// running tasks (map or reduce)
-		for (int taskId : trackerIdToRunningTaskIds.get(taskTrackerId)) {
-			if (mapTasksLeft > 0) {
+	public synchronized void removeFailedTracker(int taskTrackerId) {
+		try {
+			JobProgress progress = jobProgresses.get(currentJob.getJobId());
+			int mapTasksLeft = progress.getMapTasksLeft();
+			int reduceTasksLeft = progress.getReduceTasksLeft();
+			// running tasks (map or reduce)
+			for (int taskId : trackerIdToRunningTaskIds.get(taskTrackerId)) {
+				if (mapTasksLeft > 0) {
+					for (String dn : mapTaskIdToDns.get(taskId)) {
+						dnToMapTaskIds.get(dn).add(taskId);
+					}
+				}
+				else {
+					reduceTasksToBeRan.add(taskId);
+					reduceTasksLeft++;
+				}
+			}
+			// completed tasks (only map)
+			for (int taskId : trackerIdToCompletedMapTaskIds.get(taskTrackerId)) {
 				for (String dn : mapTaskIdToDns.get(taskId)) {
 					dnToMapTaskIds.get(dn).add(taskId);
 				}
 				mapTasksLeft++;
 			}
-			else {
-				reduceTasksToBeRan.add(taskId);
-				reduceTasksLeft++;
-			}
-		}
-		// completed tasks (only map)
-		for (int taskId : trackerIdToCompletedMapTaskIds.get(taskTrackerId)) {
-			for (String dn : mapTaskIdToDns.get(taskId)) {
-				dnToMapTaskIds.get(dn).add(taskId);
-			}
-			mapTasksLeft++;
+			
+			//System.out.println("mapTasksLeft after remove tracker " + mapTasksLeft);
+			
+			// update progress
+			progress.setMapTasksLeft(mapTasksLeft);
+			progress.setReduceTasksLeft(reduceTasksLeft);
+		} catch (Exception e) {
+			// currentJob may be null, the there will be null pointer exception
+			// and we choose to ignore it
 		}
 		
 		// remove it from taskTrackers, trackerIdToTracker, trackerIdToRunningTaskIds
@@ -496,15 +510,19 @@ class HealthMonitor implements Runnable {
 	
 	public void run() {
 		while (true) {
-			long lastHeartBeatTime = 
-						jobTracker.taskTrackers.get(taskTrackerId).getLastHeartBeatTime();
+			long lastHeartBeatTime = 0;
+			synchronized(jobTracker.trackerIdToTracker) {
+				TaskTrackerInfo tracker = 
+						jobTracker.trackerIdToTracker.get(taskTrackerId);
+				lastHeartBeatTime = tracker.getLastHeartBeatTime();
+			}
 			long now = System.currentTimeMillis();
 			if (now - lastHeartBeatTime > heartBeatInterval) {
 				timeoutCount++;
 				// if one tasktracker has some number of consecutive timeout
 				// then consider it a failed tasktracker and remove it
 				if (timeoutCount > threshold) {
-					System.out.println("tasktracker " + taskTrackerId + "fails");
+					System.out.println("tasktracker " + taskTrackerId + " fails");
 					jobTracker.removeFailedTracker(taskTrackerId);
 					break;
 				}

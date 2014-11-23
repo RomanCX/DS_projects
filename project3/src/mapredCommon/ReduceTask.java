@@ -14,11 +14,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.TreeMap;
 
 import dfsClient.DfsFileWriter;
@@ -35,15 +38,19 @@ public class ReduceTask extends Task {
 	
 	private static final int FILE_BUFFER_SIZE = 1024 * 1024;
 	
-	public class ValueEntry {
+	public class ValueEntry implements Serializable {
 		public int index;
+		public String key;
 		public String value;
 		
-		public ValueEntry(int index, String value) {
+		public ValueEntry(int index, String key, String value) {
 			this.index = index;
+			this.key = key;
 			this.value = value;
 		}
 	}
+	
+
 	
 	public ReduceTask(int taskId, Job job,
 				List<TaskTrackerInfo> taskTrackers, int namenodePort) {
@@ -150,14 +157,12 @@ public class ReduceTask extends Task {
 				
 				//Receive the file count
 				int fileCount = inStream.readInt();
-				for (int j = 0; i < fileCount; i++) {
+				for (int j = 0; j < fileCount; j++) {
 					//Receive the file length
 					long fileSize = inStream.readLong();
-					System.out.println("FileSize: " + fileSize);
 					
 					//Create the file and put to outputPath list
 					File tmpFile = new File(outputPath.getReduceTmpPath(tmpDir, i, j));
-					System.out.println("tmpFile: " + tmpFile.getAbsolutePath());
 					if (tmpFile.exists()) {
 						tmpFile.delete();
 					}
@@ -176,8 +181,6 @@ public class ReduceTask extends Task {
 							bytesRead = inStream.read(buffer, 0, (int)fileSize);
 							fileOutput.write(buffer, 0, bytesRead);
 							fileSize -= bytesRead;
-							System.out.println(bytesRead);
-							System.out.println(new String(buffer));
 						}
 					}
 					fileOutput.flush();
@@ -204,6 +207,13 @@ public class ReduceTask extends Task {
 	 * just-deleted pair belonged.
 	 */
 	private void sortFiles() throws IOException {
+		final Comparator<ValueEntry> comparator = new Comparator<ReduceTask.ValueEntry>() {
+
+			@Override
+			public int compare(ValueEntry o1, ValueEntry o2) {
+				return o1.key.compareTo(o2.key);
+			}
+		};
 		System.out.println("Sorting files");
 		List<BufferedReader> readers = new ArrayList<BufferedReader>();
 		for (int i = 0; i < mapOutFiles.size(); i++) {
@@ -211,13 +221,13 @@ public class ReduceTask extends Task {
 			readers.add(new BufferedReader(new FileReader(mapOutFiles.get(i))));
 		}
 		BufferedWriter writer = new BufferedWriter(new FileWriter(sortedFile));
-		TreeMap<String, ValueEntry> heap = new TreeMap<String, ValueEntry>();
+		PriorityQueue<ValueEntry> pq = new PriorityQueue<ValueEntry>(10, comparator);
 		for (int i = 0; i < readers.size(); i++) {
-			readLinePutHeap(heap, readers, i);
+			readLinePutHeap(pq, readers, i);
 		}
-		while (!heap.isEmpty()) {
-			int index = writeValueEntry(heap, writer);
-			readLinePutHeap(heap, readers, index);
+		while (!pq.isEmpty()) {
+			int index = writeValueEntry(pq, writer);
+			readLinePutHeap(pq, readers, index);
 		}
 		writer.flush();
 		writer.close();
@@ -229,18 +239,19 @@ public class ReduceTask extends Task {
 	 * Read a line from reader(i). This is the file that has the smallest record and 
 	 * just pulled from heap into output file
 	 */
-	private void readLinePutHeap(TreeMap<String, ValueEntry> heap, List<BufferedReader> readers, int index) {
+	private void readLinePutHeap(PriorityQueue<ValueEntry> pq, List<BufferedReader> readers, int index) {
 		try {
 			BufferedReader reader = readers.get(index);
 			String line = reader.readLine();
+			System.out.println("Read line " + line);
 			if (line == null) {
 				return;
 			}
 			int pos = line.indexOf(job.getDelim());
 			String key = line.substring(0, pos);
 			String value = line.substring(pos + 1);
-			ValueEntry valueEntry = new ValueEntry(index, value);
-			heap.put(key, valueEntry);
+			ValueEntry valueEntry = new ValueEntry(index, key, value);
+			pq.add(valueEntry);
 				
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -252,20 +263,20 @@ public class ReduceTask extends Task {
 	/*
 	 * Write a key-value pair to  the file specified by writer
 	 */
-	private int writeValueEntry(TreeMap<String, ValueEntry> heap, BufferedWriter writer) {
-		Entry<String, ValueEntry> entry = heap.pollFirstEntry();
-		String key = entry.getKey();
-		ValueEntry valueEntry = entry.getValue();
+	private int writeValueEntry(PriorityQueue<ValueEntry> pq, BufferedWriter writer) {
+		ValueEntry entry = pq.poll();
+		String key = entry.key;
 		try {
+			System.out.println("Write line" + key + job.getDelim() + entry.value);
 			writer.write(key);
 			writer.write(job.getDelim());
-			writer.write(valueEntry.value);
+			writer.write(entry.value);
 			writer.write("\n");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return valueEntry.index;
+		return entry.index;
 	}
 		
 	/*

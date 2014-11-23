@@ -87,6 +87,9 @@ public class TaskTracker {
 		return taskTracker;
 	}
 	
+	public int getId() {
+		return id;
+	}
 	
 	private void loadConfiguration() {
 		Properties pro = new Properties();

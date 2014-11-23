@@ -46,7 +46,7 @@ public class MapReduceUtils {
 	
 	public static Mapper getMapper(Job job) throws IOException, 
 		ClassNotFoundException, InstantiationException, IllegalAccessException {
-		Class<Mapper> mapClass = job.getMapClass();
+		Class<? extends Mapper> mapClass = job.getMapClass();
 		if (mapClass != null) {
 			return mapClass.newInstance();
 		}
@@ -55,7 +55,7 @@ public class MapReduceUtils {
 	
 	public static Reducer getReducer(Job job) throws IOException, 
 	ClassNotFoundException, InstantiationException, IllegalAccessException {
-		Class<Reducer> reduceClass = job.getReduceClass();
+		Class<? extends Reducer> reduceClass = job.getReduceClass();
 		if (reduceClass != null) {
 			return reduceClass.newInstance();
 		}

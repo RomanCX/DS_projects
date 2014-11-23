@@ -13,8 +13,9 @@ public class OutputPath implements Serializable {
 		this.reduceId = reduceId;
 	}
 	
-	public String getMapPath(String outputDir) {
-		return outputDir + "/map" + job.getJobId() + "_" + taskId + "_" + reduceId;
+	public String getMapPath(String outputDir, int taskTrackerId) {
+		return outputDir + "/map" + job.getJobId() + "_T" 
+				+ taskId + "_R" + reduceId + "_TK" + taskTrackerId;
 	}
 	
 	String getReduceSortedPath(String outputDir) {

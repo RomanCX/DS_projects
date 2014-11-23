@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import tasktracker.TaskTracker;
+
 public class MapRecordWriter implements RecordWriter {
 	private Job job;
 	private List<BufferedWriter> outWriters;
@@ -26,7 +28,7 @@ public class MapRecordWriter implements RecordWriter {
 		this.outResult = new TreeMap<String, List<String>>();
 		for (int i = 0; i < job.getNumReduceTasks(); i++) {
 			OutputPath mapOutputPath = new OutputPath(job, taskId, i);
-			String outputPath = mapOutputPath.getMapPath(outputDir);
+			String outputPath = mapOutputPath.getMapPath(outputDir, TaskTracker.getInstance().getId());
 			File outFile = new File(outputPath);
 			if (outFile.exists()) {
 				outFile.delete();

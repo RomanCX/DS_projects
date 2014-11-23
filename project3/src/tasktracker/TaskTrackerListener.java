@@ -49,7 +49,8 @@ public class TaskTrackerListener implements Runnable {
 				File[] filesArray = folder.listFiles();
 				List<File> listOfFiles = new ArrayList<File>();
 				String prefix = "map" + mapOutputPath.getJob().getJobId();
-				String suffix = Integer.toString(mapOutputPath.getReduceId());
+				String suffix = Integer.toString(mapOutputPath.getReduceId()) 
+						+ "_TK" + TaskTracker.getInstance().getId();
 				for (File file : filesArray) {
 					String fileName = file.getName();
 					if (fileName.startsWith(prefix) && fileName.endsWith(suffix)) {
