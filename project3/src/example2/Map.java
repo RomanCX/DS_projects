@@ -13,7 +13,7 @@ import mapredCommon.RecordWriter;
 public class Map extends Mapper {
 	HashSet<String> stopWords = new HashSet<String>();
 	
-	private final String STOP_WORDS_PATH = "../english.stop.txt";
+	private final String STOP_WORDS_PATH = "../testdata/english.stop.txt";
 	
 	@Override
 	public void setup() {
