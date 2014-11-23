@@ -35,6 +35,8 @@ public class Map extends Mapper {
 	public void map(int key, String value, RecordWriter writer) {
 		String[] words = value.split("\\W+");
 		for (String word : words) {
+			if (words.equals(""))
+				continue;
 			word = word.toLowerCase();
 			if (stopWords.contains(word)) {
 				continue;

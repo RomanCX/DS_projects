@@ -1,0 +1,9 @@
+put ../testdata/WCDocuments/1.txt /WCDocuments/1.txt
+put ../testdata/WCDocuments/2.txt /WCDocuments/2.txt
+put ../testdata/graph1.txt /graphs/graph1.txt
+put ../testdata/graph2.txt /graphs/graph2.txt
+put ../testdata/graph3.txt /graphs/graph3.txt
+put ../testdata/graph4.txt /graphs/graph4.txt
+put ../testdata/graph5.txt /graphs/graph5.txt
+put ../testdata/graph6.txt /graphs/graph6.txt
+quit

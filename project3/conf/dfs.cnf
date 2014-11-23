@@ -1,4 +1,4 @@
-fs.default.name=dfs//localhost:1099
+fs.default.name=dfs//localhost:6888
 dfs.name.dir=tmp/dfs/name
 dfs.data.dir=tmp/dfs/data
 dfs.block.size=512

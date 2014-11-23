@@ -13,27 +13,40 @@ import java.util.TreeMap;
 
 import datanode.Block;
 import namenode.DatanodeInfo;
-import protocals.Command;
-import protocals.NamenodeProtocal;
-import protocals.Operation;
+import protocols.Command;
+import protocols.NamenodeProtocol;
+import protocols.DatanodeOperation;
 
+/**
+ * DfsFileWriter is a facility to write files in local disk to dfs
+ * @author RomanC
+ *
+ */
 public class DfsFileWriter {
 	
 	// protocol used to communicate with namenode
-	private NamenodeProtocal namenode;
+	private NamenodeProtocol namenode;
 	// block size in bytes
 	private int blockSize;
 	
+	/**
+	 * Constructor
+	 * @param address ip address of namenode
+	 * @param port port number of namenode
+	 * @throws Exception
+	 */
 	public DfsFileWriter(String address, int port) throws Exception {
 		Registry registry = LocateRegistry.getRegistry(address, port);
-		namenode = (NamenodeProtocal)registry.lookup("namenode");
+		namenode = (NamenodeProtocol)registry.lookup("namenode");
 		blockSize = namenode.getBlockSize();
 	}
 	
-	/* 
-	 *  Write local file to dfs
-	 *  fileName: the path of local file
-	 *  dfsPath: the path on dfs, starting with dfs://
+	/**
+	 * Write local file to dfs
+	 * @param fileName path of local file
+	 * @param dfsPath path on dfs
+	 * @return true if successfully writes local file to dfs
+	 * <p> false if write fails
 	 */
 	public boolean write(String fileName, String dfsPath) {
 		int splitNum = split(fileName);
@@ -80,7 +93,7 @@ public class DfsFileWriter {
 	
 	/* Send a block to datanode */
 	private boolean sendBlock(Block block, DatanodeInfo datanode) {
-		Command command = new Command(Operation.WRITE_DATA, 0, null);
+		Command command = new Command(DatanodeOperation.WRITE_DATA, 0, null);
 		try (Socket socket = new Socket(datanode.getAddress(), datanode.getPort());
 			 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 			 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {

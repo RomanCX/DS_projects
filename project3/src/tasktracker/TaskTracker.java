@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.jar.JarFile;
 
-import protocals.HeartBeatResponse;
-import protocals.JobTrackerProtocol;
-import protocals.TaskTrackerOperation;
-import protocals.TkRegistration;
+import protocols.HeartBeatResponse;
+import protocols.JobTrackerProtocol;
+import protocols.TaskTrackerOperation;
+import protocols.TkRegistration;
 import mapredCommon.MapTask;
 import mapredCommon.Task;
 

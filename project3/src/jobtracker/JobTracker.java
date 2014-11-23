@@ -22,11 +22,11 @@ import mapredCommon.Job;
 import mapredCommon.MapTask;
 import mapredCommon.ReduceTask;
 import mapredCommon.Task;
-import protocals.HeartBeatResponse;
-import protocals.JobTrackerProtocol;
-import protocals.NamenodeProtocal;
-import protocals.TaskTrackerOperation;
-import protocals.TkRegistration;
+import protocols.HeartBeatResponse;
+import protocols.JobTrackerProtocol;
+import protocols.NamenodeProtocol;
+import protocols.TaskTrackerOperation;
+import protocols.TkRegistration;
 
 public class JobTracker implements JobTrackerProtocol {
 	
@@ -48,7 +48,7 @@ public class JobTracker implements JobTrackerProtocol {
 	// port number of namenode
 	private int namenodePort;
 	// protocol of name node
-	private NamenodeProtocal namenode;
+	private NamenodeProtocol namenode;
 	
 	// flag for shutting down
 	boolean toShutDown;
@@ -122,7 +122,7 @@ public class JobTracker implements JobTrackerProtocol {
 		String namenodeAddr = name.substring(pos1 + 2, pos2);
 		namenodePort = Integer.parseInt(name.substring(pos2 + 1));
 		Registry registry = LocateRegistry.getRegistry(namenodeAddr, namenodePort);
-		namenode = (NamenodeProtocal)registry.lookup("namenode");
+		namenode = (NamenodeProtocol)registry.lookup("namenode");
 			
 		// load configuration for job tracker
 		pro.clear();

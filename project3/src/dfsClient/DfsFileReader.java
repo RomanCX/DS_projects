@@ -14,26 +14,39 @@ import java.util.List;
 
 import datanode.Block;
 import namenode.DatanodeInfo;
-import protocals.Command;
-import protocals.NamenodeProtocal;
-import protocals.Operation;
+import protocols.Command;
+import protocols.NamenodeProtocol;
+import protocols.DatanodeOperation;
 
+/**
+ * DfsFileReader is a facility to read file from dfs
+ * @author RomanC
+ *
+ */
 public class DfsFileReader {
 	
 	// protocol used to communicate with namenode
-	NamenodeProtocal namenode;
+	NamenodeProtocol namenode;
 	
+	/**
+	 * Constructor
+	 * @param address ip address of namenode
+	 * @param port port number of namenode
+	 * @throws Exception
+	 */
 	public DfsFileReader(String address, int port) throws Exception {
 		
 		Registry registry = LocateRegistry.getRegistry(address, port);
-		namenode = (NamenodeProtocal)registry.lookup("namenode");
+		namenode = (NamenodeProtocol)registry.lookup("namenode");
 	}
 	
-	/*
-	 *  Read file from dfs
-	 *  dfsPath: path in dfs, starting with dfs://
-	 *  fileName: name of local file
-	 */
+	/**
+	 * Read file from dfs
+	 * @param dfsPath file path in dfs, starting with dfs://
+	 * @param fileName name on local disk
+	 * @return true if successfully read file from dfs
+	 * <p> false if the read fails
+	 */ 
 	public boolean read(String dfsPath, String fileName) {
 		int pos = dfsPath.indexOf("//");
 		dfsPath = "/" + dfsPath.substring(pos + 2);
@@ -69,7 +82,7 @@ public class DfsFileReader {
 			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 			ObjectInputStream ois = new ObjectInputStream(socket.getInputStream())) {
 			
-			oos.writeObject(new Command(Operation.READ_DATA, blockId, null));
+			oos.writeObject(new Command(DatanodeOperation.READ_DATA, blockId, null));
 			oos.flush();
 			block = (Block)ois.readObject();
 		} catch (Exception e) {

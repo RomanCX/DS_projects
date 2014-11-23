@@ -1,0 +1,2 @@
+get /output-WC/part0 wc-output
+quit

@@ -6,8 +6,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
-import protocals.Command;
-import protocals.Operation;
+import protocols.Command;
+import protocols.DatanodeOperation;
 import datanode.Block;
 import namenode.DatanodeInfo;
 
@@ -20,7 +20,7 @@ public class RecordReader {
 		Socket socket = new Socket(datanode.getAddress(), datanode.getPort());
 		ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 		ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-		oos.writeObject(new Command(Operation.READ_DATA, blockId, null));
+		oos.writeObject(new Command(DatanodeOperation.READ_DATA, blockId, null));
 		oos.flush();
 		Block block = (Block)ois.readObject();
 		socket.close();
