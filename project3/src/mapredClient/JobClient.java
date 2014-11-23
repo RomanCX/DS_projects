@@ -90,6 +90,14 @@ public class JobClient {
 				delim = args[i + 1];
 				i++;
 			}
+			else if (args[i].equals("shutdown")) {
+				try {
+					jobTracker.shutdown();
+					System.exit(0);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 			else {
 				System.out.println("unknown parameter " + args[i]);
 				System.exit(1);
