@@ -55,4 +55,8 @@ public class DatanodeInfo implements Serializable {
 	public int getId() {
 		return id;
 	}
+	
+	public void setStatus(DatanodeStatus status) {
+		this.status = status;
+	}
 }

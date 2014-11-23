@@ -1,0 +1,18 @@
+Imagine that you've got a huge file containing bunches of records and you want to process it some how. Maybe you want to search it for a particular record. Or, maybe you want to compute some sideline stats about the information contained within the records. Or, maybe you want to extract only certain information from each record. How do you go about this?
+The basis of the traditional approach is probably a huge loop:
+while not eof
+do
+read record
+process record
+update stats or other aggregate information
+-- and/or --
+write new record
+done
+write any stats or other aggregate information
+And, this approach has some advantages. It is easy to understand, systematic, and will get the job done. It is also pretty efficient if you've got one disk from which to read (possibly another disk with which to write) and one processor to do the chewing.
+But, if you've got a bunch of disks and a bunch of processors, it isn't taking advantage of them. It would be much better to divide the problem up into smaller pieces, process those smaller pieces in parallel, and merge the results together. And, as it turns out, for many, if not most, truly large scale data processing problems, the data is already distributed across many nodes, simply because it is too large to store in any single place. Bonus!
+Regardless, therein lies the rub. Many modern programming models have neither a way of representing parallelizable data nor a way of describing parallel processing. They can describe a linear, indexed list of data, And, they can describe iterating through it -- but not attacking it in parallel. There is no way to, for example, describe "Apply this function to every operation of this array" other than to specifically ask for it to be done one element at a time, sequentially.
+Fortunately, many functional programming languages do have an approach that is more natural for parallelization -- and for many other types of problems where "one after the other" isn't actually part of the strategy, just part of the implementation. You guys may be familiar with the model from 15-150/15-212: Map and Fold functions.
+What is known, in "data intensive scalable computing (disc)", a.k.a. "cloud computing" as the MapReduce paradigm, is really an extension of the techniques used traditionally in functional programming (and more recently, in many places) into the domain of distributed systems.
+The MapReduce models views the inputs, not as a linear list, but as a partitionable, parallelizable body of individual records. It allows the programmer to define, through Map operations, functions to be applied, in parallel, to each partition. Likewise, Reduce functions to aggregate the results of the Map functions together. Since the Map and Reduce functions are programmer designed, the model is very flexible and very powerful.
+It is probably also worth noting that the technique also allows the generation of large data sets in parallel. You might imagine that, for example, you want to generate a bunch of rando student records, where the names are all assembled form some pools of first and last names at random, as are the course selections, grades, &c. This could be done in a massively parallel way by generating records using Map and merging them together using Reduce. In this way the technique works for both processing and generation.

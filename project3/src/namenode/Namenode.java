@@ -45,6 +45,8 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	private long lastWriteToDiskTime;
 	private int blockSize;
 	private int replicaFactor;
+	private String namenodeImageFilename;
+	private Boolean toShutDown = false;
 	private String imagePath;
 	
 	public static final int DEFAULT_HEARTBEAT_INTERVAL = 3000;//ms
@@ -91,8 +93,7 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	
 	@Override
 	public List<Command> heartBeat(int nodeId, Map<Integer, String> blocks) {
-		System.out.println("Heartbeat from datanode " + nodeId);
-		// TODO Not fully implemented
+		
 		if (System.currentTimeMillis() - lastWriteToDiskTime >= DEFAULT_WRITE_TO_DISK_INTERVAL) {
 			writeToDisk();
 			lastWriteToDiskTime = System.currentTimeMillis();
@@ -105,13 +106,19 @@ public class Namenode implements NamenodeProtocal, Serializable {
 	        	availableDatanodes.remove(pairs.getKey());
 	        }
 	    }
-	    
 	    List<Command> returnValue = commands.get(nodeId);
 	    if (returnValue == null) {
 	    	returnValue = new ArrayList<Command>();
 	    	returnValue.add(new Command());
 	    } else {
 	    	commands.remove(((Integer)nodeId));
+	    }
+	    synchronized (toShutDown) {
+		    if (toShutDown) {
+		    	returnValue.add(new Command(Operation.SHUT_DOWN, -1));
+		    	availableDatanodes.remove(nodeId);
+		    	datanodes.get(nodeId).setStatus(DatanodeStatus.SHUT_DOWN);
+		    }
 	    }
 	    return returnValue;
 	}
@@ -325,6 +332,37 @@ public class Namenode implements NamenodeProtocal, Serializable {
 			}
 		}
 		return returnValue;
+	}
+
+
+	@Override
+	public void shutDown() {
+		synchronized (toShutDown) {
+			toShutDown = true;
+		}
+		while (availableDatanodes.size() != 0) {
+			try {
+				Thread.sleep(DEFAULT_HEARTBEAT_INTERVAL);
+			} catch (InterruptedException e) {
+				//Do nothing
+			}
+		}
+		datanodes.clear();
+		toShutDown = false;
+		writeToDisk();
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					System.out.println("System going to shut down in 5 seconds");
+					Thread.sleep(5000);
+				} catch (InterruptedException e) {
+					//Do nothing
+				}
+				System.exit(0);
+			}
+		}).start();
 	}
 
 }

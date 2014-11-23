@@ -19,6 +19,7 @@ import java.util.jar.JarFile;
 
 import protocals.HeartBeatResponse;
 import protocals.JobTrackerProtocol;
+import protocals.TaskTrackerOperation;
 import protocals.TkRegistration;
 import mapredCommon.MapTask;
 import mapredCommon.Task;
@@ -144,6 +145,9 @@ public class TaskTracker {
 	}
 	
 	private void parseHeartBeatResponse(HeartBeatResponse heartBeatResponse) {
+		if (heartBeatResponse.getOperation() == TaskTrackerOperation.SHUT_DOWN) {
+			System.exit(0);
+		}
 		List<Task> newTasks = heartBeatResponse.getTasks();
 		for (Task newTask : newTasks) {
 			try {

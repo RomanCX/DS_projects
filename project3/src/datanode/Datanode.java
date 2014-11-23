@@ -258,6 +258,8 @@ public class Datanode implements Runnable {
 		try (ObjectOutputStream oos = new ObjectOutputStream(
 						new FileOutputStream(new File(imageFile)))) {
 			oos.writeObject(blockMap);
+			oos.flush();
+			System.exit(0);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

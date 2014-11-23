@@ -36,7 +36,7 @@ public class Client {
 	 *  (4) delete dfs://path
 	 */
 	public static void main(String[] args) {
-		if (args.length != 2) {
+		if (args.length < 2) {
 			System.out.println("Usage: <namenode address> <namenode port>");
 			System.exit(1);
 		}
@@ -89,6 +89,10 @@ public class Client {
 				executeDel(splits[1]);
 			}
 			else if (splits[0].equals("quit")) {
+				System.exit(0);
+			} 
+			else if (splits[0].equals("shutdown")) {
+				executeShutDown();
 				System.exit(0);
 			}
 			else {
@@ -144,6 +148,14 @@ public class Client {
 		try {
 			namenode.delete(dfsPath);
 		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void executeShutDown() {
+		try {
+			namenode.shutDown();
+		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
 	}

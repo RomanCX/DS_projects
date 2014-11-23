@@ -25,6 +25,7 @@ import mapredCommon.Task;
 import protocals.HeartBeatResponse;
 import protocals.JobTrackerProtocol;
 import protocals.NamenodeProtocal;
+import protocals.TaskTrackerOperation;
 import protocals.TkRegistration;
 
 public class JobTracker implements JobTrackerProtocol {
@@ -49,6 +50,10 @@ public class JobTracker implements JobTrackerProtocol {
 	// protocol of name node
 	private NamenodeProtocal namenode;
 	
+	// flag for shutting down
+	boolean toShutDown;
+	// number of shutting down notifications that need to send
+	private int numNotification;
 	// next available job id
 	private int nextJobId;
 	// next available taskTracker id
@@ -87,6 +92,7 @@ public class JobTracker implements JobTrackerProtocol {
 	private HashMap<Integer, Set<Integer>> trackerIdToCompletedMapTaskIds;
 	
 	public JobTracker() {
+		toShutDown = false;
 		nextJobId = 1;
 		nextTaskTrackerId = 0;
 		currentJob = null;
@@ -328,9 +334,15 @@ public class JobTracker implements JobTrackerProtocol {
 			trackerIdToTracker.get(taskTrackerId).
 									updateHeartBeatTime(System.currentTimeMillis());
 		}
+		if (toShutDown == true) {
+			numNotification--;
+			return new HeartBeatResponse(new ArrayList<Task>(), 
+									TaskTrackerOperation.SHUT_DOWN);
+		}
 		
 		if (currentJob == null)
-			return new HeartBeatResponse(new ArrayList<Task>());
+			return new HeartBeatResponse(new ArrayList<Task>(),
+									TaskTrackerOperation.RUN_TASK);
 		
 		/* deal with finished tasks
 		 * based on finished tasks, update some data structures
@@ -407,7 +419,8 @@ public class JobTracker implements JobTrackerProtocol {
 		 *     else do nothing
 		 */
 		if (numSlots == 0 || currentJob == null)
-			return new HeartBeatResponse(new ArrayList<Task>());
+			return new HeartBeatResponse(new ArrayList<Task>(),
+									TaskTrackerOperation.RUN_TASK);
 		
 		System.out.println("numSlots: " + numSlots);
 		System.out.println("mapTasksLeft in heartbeat: " + progress.getMapTasksLeft());
@@ -424,7 +437,8 @@ public class JobTracker implements JobTrackerProtocol {
 			trackerIdToRunningTaskIds.get(taskTrackerId).add(task.getTaskId());
 			numSlots--;
 		}
-		return new HeartBeatResponse(tasksToBeAssigned);
+		return new HeartBeatResponse(tasksToBeAssigned,
+								TaskTrackerOperation.RUN_TASK);
 	}
 	
 	@Override
@@ -472,7 +486,9 @@ public class JobTracker implements JobTrackerProtocol {
 		// when it recovers, it will receive a new tasktracker id, so the blacklist doesn't
 		// need to change
 		TaskTrackerInfo tracker = trackerIdToTracker.get(taskTrackerId);
-		taskTrackers.remove(tracker);
+		synchronized(taskTrackers) {
+			taskTrackers.remove(tracker);
+		}
 		trackerIdToTracker.remove(taskTrackerId);
 		trackerIdToRunningTaskIds.remove(taskTrackerId);
 		trackerIdToCompletedMapTaskIds.remove(taskTrackerId);	
@@ -485,6 +501,34 @@ public class JobTracker implements JobTrackerProtocol {
 				(JobTrackerProtocol)UnicastRemoteObject.exportObject(jobTracker, 0);
 		Registry registry = LocateRegistry.createRegistry(jobTracker.getPort());
 		registry.rebind(JOBTRACKER_RMI_NAME, jobTrackerStub);
+	}
+
+	@Override
+	public void shutdown() throws RemoteException {
+		toShutDown = true;
+		synchronized(taskTrackers) {
+			numNotification = taskTrackers.size();
+		}
+		while (numNotification > 0) {
+			try {
+				Thread.sleep(heartBeatInterval);
+			} catch (InterruptedException e) {
+				//Do nothing
+			}
+		}
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				try {
+					System.out.println("System going to shut down in 5 seconds");
+					Thread.sleep(5000);
+				} catch (InterruptedException e) {
+					//Do nothing
+				}
+				System.exit(0);
+			}
+		}).start();
 	}	
 }
 
@@ -510,6 +554,8 @@ class HealthMonitor implements Runnable {
 	
 	public void run() {
 		while (true) {
+			if (jobTracker.toShutDown == true)
+				break;
 			long lastHeartBeatTime = 0;
 			synchronized(jobTracker.trackerIdToTracker) {
 				TaskTrackerInfo tracker = 
@@ -543,4 +589,5 @@ class HealthMonitor implements Runnable {
 			}
 		}
 	}
+	
 }
