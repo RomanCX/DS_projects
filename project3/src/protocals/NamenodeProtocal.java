@@ -33,4 +33,6 @@ public interface NamenodeProtocal extends Remote {
 	public List<String> ls(String prefix) throws RemoteException;
 	
 	public TreeMap<Integer, List<DatanodeInfo>> getFileBlocks(String fileName) throws RemoteException;
+	
+	public void shutDown() throws RemoteException;
 }
